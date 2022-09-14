@@ -1,0 +1,77 @@
+Parameters:
+  HSWInstanceType:
+    Type: String
+    Default: t3.xlarge
+    AllowedValues:
+      - m5.large
+      - m5.xlarge
+      - m6i.large
+      - m6i.xlarge
+      - t3.large
+      - t3.xlarge
+
+  ICInstanceType:
+    Type: String
+    Default: t3.large
+    AllowedValues:
+      - m5.large
+      - m5.xlarge
+      - m6i.large
+      - m6i.xlarge
+      - t3.large
+      - t3.xlarge     
+      
+  KeyPairName:
+    Description: "Amazon EC2 Key Pair to connect to new instances"
+    Type: AWS::EC2::KeyPair::KeyName 
+
+  ServerVPCId:
+    Description: VPC to create the VMs in
+    Type: AWS::EC2::VPC::Id
+
+  ServerSubnet1:
+    Type: AWS::EC2::Subnet::Id
+    Description: The subnet to create VM1 in
+
+  ServerSubnet2:
+    Type: AWS::EC2::Subnet::Id
+    Description: The subnet to create VM2 in
+
+  HSWSecurityGroups:
+    Type: List<AWS::EC2::SecurityGroup::Id>
+    Description: Security Groups for the HSW VMs being created
+
+  ICSecurityGroups:
+    Type: List<AWS::EC2::SecurityGroup::Id>
+    Description: Security Groups for the HSW VMs being created
+
+  ServerOS:
+      Description: Server OS
+      Type: String
+      AllowedValues: [Server2022, Server2019, Server2016]
+      ConstraintDescription: Must be supported Windows Server OS      
+
+Mappings:
+  RegionMap: 
+    us-east-1:
+      Server2022: ami-0fb5befc1450ca205
+      Server2019: ami-0c95d38b24a19de18
+      Server2016: ami-03fdc8b14e44968e6
+    us-east-2:
+      Server2022: ami-02bddcf6b9473bd61
+      Server2019: ami-0d72555523e18b6d7
+      Server2016: ami-04d1c6a7290ee815a
+    us-west-1:
+      Server2022: ami-03f9d9db9db74d02a
+      Server2019: ami-0a6faf8a86971bd15
+      Server2016: ami-0422fbbb4ff0c83b6
+    us-west-2:
+      Server2022: ami-090b2f6d3af372d21
+      Server2019: ami-0e6bf13e3eb85d0ba
+      Server2016: ami-034e86083b6e63887
+
+
+
+
+
+

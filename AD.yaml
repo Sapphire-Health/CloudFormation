@@ -1,0 +1,62 @@
+Parameters:
+  DirectoryVPCId:
+    Description: VPC to create the directory in
+    Type: AWS::EC2::VPC::Id
+  
+  DirectorySubnet1:
+    Type: AWS::EC2::Subnet::Id
+    Description: The first subnet to create the directory in
+  
+  DirectorySubnet2:
+    Type: AWS::EC2::Subnet::Id
+    Description: The second subnet to create the directory in
+
+  DirectoryAdminPassword:
+    Type: AWS::SSM::Parameter::Value<String>
+    Description: SSM parameter to use as the AD Admin Password
+    Default: ADAdminPassword
+
+Rules:
+  Subnet1InVPC:
+    Assertions:
+      - Assert:
+          'Fn::Equals':
+            - 'Fn::ValueOf':
+              - DirectorySubnet1
+              - VpcId
+            - Ref: DirectoryVPCId
+    AssertDescription: All subnets must in the VPC
+  Subnet2InVPC:
+    Assertions:
+      - Assert:
+          'Fn::Equals':
+            - 'Fn::ValueOf':
+                - DirectorySubnet2
+                - VpcId
+            - Ref: DirectoryVPCId
+    AssertDescription: All subnets must in the VPC        
+  SeparateSubnetAZs:
+    Assertions:
+      - Assert:
+          'Fn::Not':
+             - 'Fn::Equals':
+                - 'Fn::ValueOf':
+                    - DirectorySubnet1
+                    - AvailabilityZone
+                - 'Fn::ValueOf':
+                    - DirectorySubnet2
+                    - AvailabilityZone
+    AssertDescription: Subnets must be in different AZs   
+
+Resources:
+  myDirectory: 
+    Type: AWS::DirectoryService::MicrosoftAD
+    Properties: 
+      Edition: Standard
+      Name: "aws.lcmchealth.org"
+      Password: !Ref DirectoryAdminPassword
+      VpcSettings: 
+        SubnetIds: 
+          - !Ref DirectorySubnet1
+          - !Ref DirectorySubnet2
+        VpcId: !Ref DirectoryVPCId

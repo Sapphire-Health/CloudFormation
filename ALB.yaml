@@ -1,0 +1,82 @@
+Parameters:
+  ServerVPCId:
+    Description: VPC to containing the Target EC2 Instances
+    Type: AWS::EC2::VPC::Id
+
+  ALBVPCId:
+    Description: VPC to create the ALBs in. This VPC must have an Internet Gateway
+    Type: AWS::EC2::VPC::Id
+
+  HSWTargetServers:
+    Description: HSW Servers that will be load balanced
+    Type: List<AWS::EC2::Image::Id>
+
+  ICTargetServers:
+    Description: Interconnect Servers that will be load balanced for Haiku/Canto
+    Type: List<AWS::EC2::Image::Id>
+
+Resources:
+#https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-targetgroup.html
+  HSWTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub "${AWS::StackName}-HSWTargetGroup"
+      HealthCheckIntervalSeconds: 30
+      HealthCheckPath: /
+      HealthCheckPort: 443
+      HealthCheckProtocol: HTTPS
+      HealthCheckTimeoutSeconds: 10
+      HealthyThresholdCount: 3
+      UnhealthyThresholdCount: 3
+      Matcher:
+        HttpCode: 200
+      Port: 443
+      Protocol: HTTPS
+      ProtocolVersion: HTTP1
+      TargetType: instance
+      Targets: !Ref HSWTargetServers
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: 3600
+        - Key: stickiness.enabled
+          Value: true
+        - Key: stickiness.type
+          Value: app_cookie
+        - Key: stickiness.app_cookie.cookie_name
+          Value: AWSHSWCOOKIE
+        - Key: stickiness.app_cookie_duration_seconds
+          Value: 86400
+      VpcId: !Ref ServerVPCId                 
+
+  ICTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub "${AWS::StackName}-ICTargetGroup"
+      HealthCheckIntervalSeconds: 30
+      HealthCheckPath: /
+      HealthCheckPort: 443
+      HealthCheckProtocol: HTTPS
+      HealthCheckTimeoutSeconds: 10
+      HealthyThresholdCount: 3
+      UnhealthyThresholdCount: 3
+      Matcher:
+        HttpCode: 200
+      Port: 443
+      Protocol: HTTPS
+      ProtocolVersion: HTTP1
+      TargetType: instance
+      Targets: !Ref ICTargetServers
+      VpcId: !Ref ServerVPCId    
+
+#https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-loadbalancer.html
+  HSWALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties: 
+      IpAddressType: ipv4
+      LoadBalancerAttributes: 
+        - Key: routing.http.xff_header_processing.mode
+          Value: append
+      Name: !Sub "${AWS::StackName}-HSWALB"
+      Scheme: internet-facing
+      Subnets: !Ref 
+      Type: application

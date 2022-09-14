@@ -1,0 +1,362 @@
+Parameters:
+  KuiperInstanceType:
+    Type: String
+    Default: t3.large
+    AllowedValues:
+      - m5.large
+      - m5.xlarge
+      - m5.2xlarge
+      - m6i.large
+      - m6i.xlarge
+      - m6i.2xlarge
+      - t3.large
+      - t3.xlarge
+      - t3.2xlarge      
+
+  PulseInstanceType:
+    Type: String
+    Default: t3.xlarge
+    AllowedValues:
+      - m5.large
+      - m5.xlarge
+      - m5.2xlarge
+      - m6i.large
+      - m6i.xlarge
+      - m6i.2xlarge
+      - t3.large
+      - t3.xlarge
+      - t3.2xlarge         
+
+  SQLInstanceType:
+    Type: String
+    Default: t3.2xlarge
+    AllowedValues:
+      - m5.large
+      - m5.xlarge
+      - m5.2xlarge
+      - m6i.large
+      - m6i.xlarge
+      - m6i.2xlarge
+      - t3.large
+      - t3.xlarge
+      - t3.2xlarge         
+
+  ServerOS:
+    Description: Server OS
+    Type: String
+    Default: Server2019
+    AllowedValues: [Server2022, Server2019, Server2016]
+    ConstraintDescription: Must be supported Windows Server OS
+  
+  SQLVersion:
+    Description: Which SQL version will be deployed?
+    Type: String
+    Default: SQLStandard
+    AllowedValues: [SQLStandard, SQLEnterprise]
+
+  Kuiper1IP:
+    Description: Private IP address for Kuiper Server 1
+    Type: String
+    MinLength: '7'
+    MaxLength: '15'
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})
+    ConstraintDescription: must be a valid IP of the form x.x.x.x
+  
+  Kuiper2IP:
+    Description: Private IP address for Kuiper Server 2
+    Type: String
+    MinLength: '7'
+    MaxLength: '15'
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})
+    ConstraintDescription: must be a valid IP of the form x.x.x.x
+
+  Pulse1IP:
+    Description: Private IP address for Pulse Server 1
+    Type: String
+    MinLength: '7'
+    MaxLength: '15'
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})
+    ConstraintDescription: must be a valid IP of the form x.x.x.x
+  
+  Pulse2IP:
+    Description: Private IP address for Pulse Server 2
+    Type: String
+    MinLength: '7'
+    MaxLength: '15'
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})
+    ConstraintDescription: must be a valid IP of the form x.x.x.x
+
+  SQLIP:
+    Description: Private IP address for Multipurpose SQL Server
+    Type: String
+    MinLength: '7'
+    MaxLength: '15'
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})
+    ConstraintDescription: must be a valid IP of the form x.x.x.x
+
+  KuiperServerName:
+    Description: Server Name for Kuiper Server
+    Type: String
+  
+  PulseServerName:
+    Description: Server Name for System Pulse Server
+    Type: String
+
+  SQLServerName:
+    Description: Server Name for Multipurpose SQL Server
+    Type: String
+
+  KeyPairName:
+    Description: "Amazon EC2 Key Pair to connect to new instances"
+    Type: AWS::EC2::KeyPair::KeyName 
+  
+  ServerVPCId:
+    Description: VPC to create the VMs in
+    Type: AWS::EC2::VPC::Id
+  
+  ServerSubnet1:
+    Type: AWS::EC2::Subnet::Id
+    Description: The subnet to create Primary VM in
+  
+  ServerSubnet2:
+    Type: AWS::EC2::Subnet::Id
+    Description: The subnet to create HA (Second) VM in. Will only be created if HA is set to 'Yes'
+  
+  HA:
+    Description: Should HA be added for Kuiper and System Pulse
+    Type: String
+    Default: 'No'
+    AllowedValues: ['No', 'Yes']
+
+Conditions:
+  HA: !Equals
+    - !Ref HA
+    - 'Yes'
+
+Rules:
+  Subnet1InVPC:
+    Assertions:
+      - Assert:
+          'Fn::Equals':
+            - 'Fn::ValueOf':
+              - ServerSubnet1
+              - VpcId
+            - Ref: ServerVPCId
+    AssertDescription: All subnets must in the VPC
+  Subnet2InVPC:
+    Assertions:
+      - Assert:
+          'Fn::Equals':
+            - 'Fn::ValueOf':
+                - ServerSubnet2
+                - VpcId
+            - Ref: ServerVPCId
+    AssertDescription: All subnets must in the VPC        
+  SeparateSubnetAZs:
+    Assertions:
+      - Assert:
+          'Fn::Not':
+             - 'Fn::Equals':
+                - 'Fn::ValueOf':
+                    - ServerSubnet1
+                    - AvailabilityZone
+                - 'Fn::ValueOf':
+                    - ServerSubnet2
+                    - AvailabilityZone
+    AssertDescription: Subnets must be in different AZs    
+Mappings:
+  RegionMap: 
+    us-east-1:
+      Server2022: ami-0fb5befc1450ca205
+      Server2019: ami-0c95d38b24a19de18
+      Server2016: ami-03fdc8b14e44968e6
+      SQLStandard: ami-0ca45684f112f66c0
+      SQLEnterprise: ami-08faaba7f33a5ea92
+    us-east-2:
+      Server2022: ami-02bddcf6b9473bd61
+      Server2019: ami-0d72555523e18b6d7
+      Server2016: ami-04d1c6a7290ee815a
+      SQLStandard: ami-01aa6aea4f94cde98
+      SQLEnterprise: ami-0ca68cef7ea227405    
+    us-west-1:
+      Server2022: ami-03f9d9db9db74d02a
+      Server2019: ami-0a6faf8a86971bd15
+      Server2016: ami-0422fbbb4ff0c83b6
+      SQLStandard: ami-0b06751f71a66eefa
+      SQLEnterprise: ami-002296d8461f81f86    
+    us-west-2:
+      Server2022: ami-090b2f6d3af372d21
+      Server2019: ami-0e6bf13e3eb85d0ba
+      Server2016: ami-034e86083b6e63887
+      SQLStandard: ami-0a4dfa25dae331ee6
+      SQLEnterprise: ami-035277a0ef845e843     
+  
+Resources:
+  #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-networkinterface.html
+  KuiperNIC1:
+    Type: AWS::EC2::NetworkInterface
+    Properties:
+      Description: !Sub 'NIC for ${KuiperServerName}1'
+      GroupSet:
+        - !ImportValue KuiperSG
+      PrivateIpAddress: !Ref Kuiper1IP
+      SubnetId: !Ref ServerSubnet1
+      Tags:
+        - Key: Name
+          Value: !Sub '${KuiperServerName}1-NIC1-${AWS::StackName}'
+
+  KuiperNIC2:
+    Type: AWS::EC2::NetworkInterface
+    Condition: HA
+    Properties:
+      Description: !Sub 'NIC for ${KuiperServerName}2'
+      GroupSet:
+        - !ImportValue KuiperSG
+      PrivateIpAddress: !Ref Kuiper2IP
+      SubnetId: !Ref ServerSubnet2
+      Tags:
+        - Key: Name
+          Value: !Sub '${KuiperServerName}2-NIC1-${AWS::StackName}'          
+
+  PulseNIC1:
+    Type: AWS::EC2::NetworkInterface
+    Properties:
+      Description: !Sub 'NIC for ${PulseServerName}1'
+      GroupSet:
+        - !ImportValue PulseSG
+      PrivateIpAddress: !Ref Pulse1IP
+      SubnetId: !Ref ServerSubnet1
+      Tags:
+        - Key: Name
+          Value: !Sub '${PulseServerName}1-NIC1-${AWS::StackName}'
+
+  PulseNIC2:
+    Type: AWS::EC2::NetworkInterface
+    Condition: HA
+    Properties:
+      Description: !Sub 'NIC for ${PulseServerName}2'
+      GroupSet:
+        - !ImportValue PulseSG
+      PrivateIpAddress: !Ref Pulse2IP
+      SubnetId: !Ref ServerSubnet2
+      Tags:
+        - Key: Name
+          Value: !Sub '${PulseServerName}2-NIC1-${AWS::StackName}'    
+
+  SQLNIC:
+    Type: AWS::EC2::NetworkInterface
+    Properties:
+      Description: !Sub 'NIC for ${SQLServerName}'
+      GroupSet:
+        - !ImportValue SQLSG
+      PrivateIpAddress: !Ref SQLIP
+      SubnetId: !Ref ServerSubnet1
+      Tags:
+        - Key: Name
+          Value: !Sub '${SQLServerName}-NIC1-${AWS::StackName}'  
+  
+  #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-instance.html
+  KuiperServer1:
+    Type: AWS::EC2::Instance
+    Properties: 
+      AvailabilityZone: !Select [0, Fn::GetAZs: !Ref AWS::Region]
+      BlockDeviceMappings: 
+      - DeviceName: "/dev/sda1"
+        Ebs: 
+          VolumeType: "gp3"
+          DeleteOnTermination: "false"
+          VolumeSize: "50"      
+      ImageId: !FindInMap [RegionMap, !Ref 'AWS::Region', !Ref ServerOS]
+      InstanceType: !Ref KuiperInstanceType
+      KeyName: !Ref KeyPairName
+      NetworkInterfaces:
+        - DeviceIndex: "0"
+          NetworkInterfaceId: !Ref "KuiperNIC1"
+      Tags: 
+        - Key: Name
+          Value: !Sub ${KuiperServerName}1
+  
+  KuiperServer2:
+    Type: AWS::EC2::Instance
+    Condition: HA
+    Properties: 
+      AvailabilityZone: !Select [1, Fn::GetAZs: !Ref AWS::Region]
+      BlockDeviceMappings: 
+      - DeviceName: "/dev/sda1"
+        Ebs: 
+          VolumeType: "gp3"
+          DeleteOnTermination: "false"
+          VolumeSize: "50"      
+      ImageId: !FindInMap [RegionMap, !Ref 'AWS::Region', !Ref ServerOS]
+      InstanceType: !Ref KuiperInstanceType
+      KeyName: !Ref KeyPairName
+      NetworkInterfaces:
+        - DeviceIndex: "0"
+          NetworkInterfaceId: !Ref "KuiperNIC2"
+      Tags: 
+        - Key: Name
+          Value: !Sub ${KuiperServerName}2
+
+  PulseServer1:
+    Type: AWS::EC2::Instance
+    Properties: 
+      AvailabilityZone: !Select [0, Fn::GetAZs: !Ref AWS::Region]
+      BlockDeviceMappings: 
+      - DeviceName: "/dev/sda1"
+        Ebs: 
+          VolumeType: "gp3"
+          DeleteOnTermination: "false"
+          VolumeSize: "50"      
+      ImageId: !FindInMap [RegionMap, !Ref 'AWS::Region', !Ref ServerOS]
+      InstanceType: !Ref PulseInstanceType
+      KeyName: !Ref KeyPairName
+      NetworkInterfaces:
+        - DeviceIndex: "0"
+          NetworkInterfaceId: !Ref "PulseNIC1"
+      Tags: 
+        - Key: Name
+          Value: !Sub ${PulseServerName}1
+  
+  PulseServer2:
+    Type: AWS::EC2::Instance
+    Condition: HA
+    Properties: 
+      AvailabilityZone: !Select [1, Fn::GetAZs: !Ref AWS::Region]
+      BlockDeviceMappings: 
+      - DeviceName: "/dev/sda1"
+        Ebs: 
+          VolumeType: "gp3"
+          DeleteOnTermination: "false"
+          VolumeSize: "50"      
+      ImageId: !FindInMap [RegionMap, !Ref 'AWS::Region', !Ref ServerOS]
+      InstanceType: !Ref PulseInstanceType
+      KeyName: !Ref KeyPairName
+      NetworkInterfaces:
+        - DeviceIndex: "0"
+          NetworkInterfaceId: !Ref "PulseNIC2"
+      Tags: 
+        - Key: Name
+          Value: !Sub ${PulseServerName}2
+
+  SQLServer:
+    Type: AWS::EC2::Instance
+    Properties: 
+      AvailabilityZone: !Select [0, Fn::GetAZs: !Ref AWS::Region]
+      BlockDeviceMappings: 
+      - DeviceName: "/dev/sda1"
+        Ebs: 
+          VolumeType: "gp3"
+          DeleteOnTermination: "false"
+          VolumeSize: "70"      
+      ImageId: !FindInMap [RegionMap, !Ref 'AWS::Region', !Ref SQLVersion]
+      InstanceType: !Ref SQLInstanceType
+      KeyName: !Ref KeyPairName
+      NetworkInterfaces:
+        - DeviceIndex: "0"
+          NetworkInterfaceId: !Ref "SQLNIC"
+      Tags: 
+        - Key: Name
+          Value: !Sub ${SQLServerName}1
+
+         
+  

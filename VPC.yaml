@@ -1,0 +1,641 @@
+Parameters:
+  CentralIngressVPCCIDR:
+    Description: VPC for third party load balancers for external traffic
+    Type: String
+    MinLength: '9'
+    MaxLength: '18'
+    Default: 10.0.0.0/24
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
+    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+
+  CentralEgressVPCCIDR:
+    Description: VPC for NAT Gateways so private VPCs can access the internet
+    Type: String
+    MinLength: '9'
+    MaxLength: '18'
+    Default: 10.0.1.0/24
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
+    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.  
+
+  InspectionVPCCIDR:
+    Description: VPC for Network Firewalls
+    Type: String
+    MinLength: '9'
+    MaxLength: '18'
+    Default: 10.0.2.0/24
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
+    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+
+  SharedInfrastructureVPCCIDR:
+    Description: VPC for shared infrastructure and core Windows servers
+    Type: String
+    MinLength: '9'
+    MaxLength: '18'
+    Default: 10.0.3.0/24
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
+    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+
+  EpicVPCCIDR:
+    Description: VPC for Epic Database and Epic Client Servers
+    Type: String
+    MinLength: '9'
+    MaxLength: '18'
+    Default: 10.0.4.0/24
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
+    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+
+Resources:
+  #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-transitgateway.html
+  EpicTransitGateway:
+    Type: "AWS::EC2::TransitGateway"
+    Properties:
+      Description: "Epic Read Only Transit Gateway"
+      AutoAcceptSharedAttachments: "disable"
+      DefaultRouteTableAssociation: "enable"
+      DnsSupport: "enable"
+      VpnEcmpSupport: "enable"
+      Tags:
+      - Key: Name
+        Value: !Sub 'TransitGateway-${AWS::StackName}'
+
+  #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-vpc.html
+  CentralIngressVPC:
+    Type: AWS::EC2::VPC
+    Properties: 
+      CidrBlock: !Ref CentralIngressVPCCIDR
+      EnableDnsHostnames: 'false'
+      EnableDnsSupport: 'false'
+      Tags:
+        - Key: Name
+          Value: !Sub 'CentralIngressVPC-${AWS::StackName}'
+
+  CentralEgressVPC:
+    Type: AWS::EC2::VPC
+    Properties: 
+      CidrBlock: !Ref CentralEgressVPCCIDR
+      EnableDnsHostnames: 'false'
+      EnableDnsSupport: 'false'
+      Tags:
+        - Key: Name
+          Value: !Sub 'CentralEgressVPC-${AWS::StackName}'
+
+  InspectionVPC:
+    Type: AWS::EC2::VPC
+    Properties: 
+      CidrBlock: !Ref InspectionVPCCIDR
+      EnableDnsHostnames: 'false'
+      EnableDnsSupport: 'false'
+      Tags:
+        - Key: Name
+          Value: !Sub 'InspectionVPC-${AWS::StackName}'  
+
+  SharedInfrastructureVPC:
+    Type: AWS::EC2::VPC
+    Properties: 
+      CidrBlock: !Ref SharedInfrastructureVPCCIDR
+      EnableDnsHostnames: 'false'
+      EnableDnsSupport: 'false'
+      Tags:
+        - Key: Name
+          Value: !Sub 'SharedInfrastructureVPC-${AWS::StackName}' 
+
+  EpicVPC:
+    Type: AWS::EC2::VPC
+    Properties: 
+      CidrBlock: !Ref EpicVPCCIDR
+      EnableDnsHostnames: 'false'
+      EnableDnsSupport: 'false'
+      Tags:
+        - Key: Name
+          Value: !Sub 'EpicVPC-${AWS::StackName}'             
+
+#https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-subnet.html
+  CentralIngressPublic1:
+    Type: AWS::EC2::Subnet
+    Properties: 
+      AvailabilityZone: !Select [0, Fn::GetAZs: !Ref AWS::Region]
+      CidrBlock: !Select [ 0, !Cidr [ !GetAtt CentralIngressVPC.CidrBlock, 2, 4 ] ]
+      MapPublicIpOnLaunch: 'False'
+      VpcId: !Ref CentralIngressVPC
+      Tags:
+        - Key: Name
+          Value: !Sub 'CentralIngressPublicAZ1-${AWS::StackName}'
+  CentralIngressPublic2:
+    Type: AWS::EC2::Subnet
+    Properties: 
+      AvailabilityZone: !Select [1, Fn::GetAZs: !Ref AWS::Region]
+      CidrBlock: !Select [ 1, !Cidr [ !GetAtt CentralIngressVPC.CidrBlock, 2, 4 ] ]
+      MapPublicIpOnLaunch: 'False'
+      VpcId: !Ref CentralIngressVPC
+      Tags:
+        - Key: Name
+          Value: !Sub 'CentralIngressPublicAZ2-${AWS::StackName}'               
+  CentralEgressPublic1:
+    Type: AWS::EC2::Subnet
+    Properties: 
+      AvailabilityZone: !Select [0, Fn::GetAZs: !Ref AWS::Region]
+      CidrBlock: !Select [ 0, !Cidr [ !GetAtt CentralEgressVPC.CidrBlock, 2, 4 ] ]
+      MapPublicIpOnLaunch: 'False'
+      VpcId: !Ref CentralEgressVPC
+      Tags:
+        - Key: Name
+          Value: !Sub 'CentralEgressPublicAZ1-${AWS::StackName}'      
+  CentralEgressPublic2:
+    Type: AWS::EC2::Subnet
+    Properties: 
+      AvailabilityZone: !Select [1, Fn::GetAZs: !Ref AWS::Region]
+      CidrBlock: !Select [ 1, !Cidr [ !GetAtt CentralEgressVPC.CidrBlock, 2, 4 ] ]
+      MapPublicIpOnLaunch: 'False'
+      VpcId: !Ref CentralEgressVPC
+      Tags:
+        - Key: Name
+          Value: !Sub 'CentralEgressPublicAZ2-${AWS::StackName}'  
+  InspectionPrivate1:
+    Type: AWS::EC2::Subnet
+    Properties: 
+      AvailabilityZone: !Select [0, Fn::GetAZs: !Ref AWS::Region]
+      CidrBlock: !Select [ 0, !Cidr [ !GetAtt InspectionVPC.CidrBlock, 2, 4 ] ]
+      MapPublicIpOnLaunch: 'False'
+      VpcId: !Ref InspectionVPC
+      Tags:
+        - Key: Name
+          Value: !Sub 'InspectionPrivateAZ1-${AWS::StackName}'      
+  InspectionPrivate2:
+    Type: AWS::EC2::Subnet
+    Properties: 
+      AvailabilityZone: !Select [1, Fn::GetAZs: !Ref AWS::Region]
+      CidrBlock: !Select [ 1, !Cidr [ !GetAtt InspectionVPC.CidrBlock, 2, 4 ] ]
+      MapPublicIpOnLaunch: 'False'
+      VpcId: !Ref InspectionVPC
+      Tags:
+        - Key: Name
+          Value: !Sub 'InspectionPrivateAZ2-${AWS::StackName}'              
+  SharedInfrastructurePrivate1:
+    Type: AWS::EC2::Subnet
+    Properties: 
+      AvailabilityZone: !Select [0, Fn::GetAZs: !Ref AWS::Region]
+      CidrBlock: !Select [ 0, !Cidr [ !GetAtt SharedInfrastructureVPC.CidrBlock, 2, 5 ] ]
+      MapPublicIpOnLaunch: 'False'
+      VpcId: !Ref SharedInfrastructureVPC
+      Tags:
+        - Key: Name
+          Value: !Sub 'SharedInfraPrivateAZ1-${AWS::StackName}'      
+  SharedInfrastructurePrivate2:
+    Type: AWS::EC2::Subnet
+    Properties: 
+      AvailabilityZone: !Select [1, Fn::GetAZs: !Ref AWS::Region]
+      CidrBlock: !Select [ 1, !Cidr [ !GetAtt SharedInfrastructureVPC.CidrBlock, 2, 5 ] ]
+      MapPublicIpOnLaunch: 'False'
+      VpcId: !Ref SharedInfrastructureVPC
+      Tags:
+        - Key: Name
+          Value: !Sub 'SharedInfraPrivateAZ2-${AWS::StackName}'
+  WSSPrivate1:
+    Type: AWS::EC2::Subnet
+    Properties: 
+      AvailabilityZone: !Select [0, Fn::GetAZs: !Ref AWS::Region]
+      CidrBlock: !Select [ 0, !Cidr [ !GetAtt EpicVPC.CidrBlock, 3, 5 ] ]
+      MapPublicIpOnLaunch: 'False'
+      VpcId: !Ref EpicVPC
+      Tags:
+        - Key: Name
+          Value: !Sub 'WSSPrivateAZ1-${AWS::StackName}'      
+  WSSPrivate2:
+    Type: AWS::EC2::Subnet
+    Properties: 
+      AvailabilityZone: !Select [1, Fn::GetAZs: !Ref AWS::Region]
+      CidrBlock: !Select [ 1, !Cidr [ !GetAtt EpicVPC.CidrBlock, 3, 5 ] ]
+      MapPublicIpOnLaunch: 'False'
+      VpcId: !Ref EpicVPC
+      Tags:
+        - Key: Name
+          Value: !Sub 'WSSPrivateAZ2-${AWS::StackName}'
+  ODBPrivate1:
+    Type: AWS::EC2::Subnet
+    Properties: 
+      AvailabilityZone: !Select [0, Fn::GetAZs: !Ref AWS::Region]
+      CidrBlock: !Select [ 2, !Cidr [ !GetAtt EpicVPC.CidrBlock, 3, 5 ] ]
+      MapPublicIpOnLaunch: 'False'
+      VpcId: !Ref EpicVPC
+      Tags:
+        - Key: Name
+          Value: !Sub 'ODBPrivateAZ1-${AWS::StackName}'            
+
+  #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-routetable.html
+  CentralIngressPublic1RT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref CentralIngressVPC
+      Tags:
+        - Key: Name
+          Value: !Sub 'CentralIngressPublicAZ1-RT-${AWS::StackName}'
+  CentralIngressPublic2RT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref CentralIngressVPC
+      Tags:
+        - Key: Name
+          Value: !Sub 'CentralIngressPublicAZ2-RT-${AWS::StackName}'  
+  CentralEgressPublic1RT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref CentralEgressVPC
+      Tags:
+        - Key: Name
+          Value: !Sub 'CentralEgressPublicAZ1-RT-${AWS::StackName}'
+  CentralEgressPublic2RT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref CentralEgressVPC
+      Tags:
+        - Key: Name
+          Value: !Sub 'CentralEgressPublicAZ2-RT-${AWS::StackName}'
+  Inspection1RT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref InspectionVPC
+      Tags:
+        - Key: Name
+          Value: !Sub 'InspectionPrivateAZ1-RT-${AWS::StackName}'
+  Inspection2RT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref InspectionVPC
+      Tags:
+        - Key: Name
+          Value: !Sub 'InspectionPrivateAZ2-RT-${AWS::StackName}'
+  SharedInfrastructure1RT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref SharedInfrastructureVPC
+      Tags:
+        - Key: Name
+          Value: !Sub 'SharedInfrastructurePrivateAZ1-RT-${AWS::StackName}'
+  SharedInfrastructure2RT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref SharedInfrastructureVPC
+      Tags:
+        - Key: Name
+          Value: !Sub 'SharedInfrastructurePrivateAZ2-RT-${AWS::StackName}'
+  EpicWSS1RT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref EpicVPC
+      Tags:
+        - Key: Name
+          Value: !Sub 'EpicWSSPrivateAZ1-RT-${AWS::StackName}'
+  EpicWSS2RT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref EpicVPC
+      Tags:
+        - Key: Name
+          Value: !Sub 'EpicWSSPrivateAZ2-RT-${AWS::StackName}'
+  ODB1RT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref EpicVPC
+      Tags:
+        - Key: Name
+          Value: !Sub 'ODBPrivateAZ1-RT-${AWS::StackName}'
+
+  #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-transitgatewayattachment.html
+  InspectionVPCTGWAttach:
+    Type: AWS::EC2::TransitGatewayAttachment
+    Properties: 
+      SubnetIds: 
+        - !Ref InspectionPrivate1
+        - !Ref InspectionPrivate2
+      TransitGatewayId: !Ref EpicTransitGateway
+      VpcId: !Ref InspectionVPC
+
+  SharedInfraVPCTGWAttach:
+    Type: AWS::EC2::TransitGatewayAttachment
+    Properties: 
+      SubnetIds: 
+        - !Ref SharedInfrastructurePrivate1
+        - !Ref SharedInfrastructurePrivate2
+      TransitGatewayId: !Ref EpicTransitGateway
+      VpcId: !Ref SharedInfrastructureVPC      
+
+  EpicVPCTGWAttach:
+    Type: AWS::EC2::TransitGatewayAttachment
+    Properties: 
+      SubnetIds: 
+        - !Ref WSSPrivate1
+        - !Ref WSSPrivate2
+      TransitGatewayId: !Ref EpicTransitGateway
+      VpcId: !Ref EpicVPC                                  
+
+  #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-vpcpeeringconnection.html
+  IngressToInspection:
+    Type: AWS::EC2::VPCPeeringConnection
+    Properties:
+      PeerVpcId: !Ref CentralIngressVPC
+      VpcId: !Ref InspectionVPC
+
+  #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-internetgateway.html        
+  IngressInternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Environment
+          Value: ReadOnly
+        - Key: Name
+          Value: !Sub 'IGWCentralIngressVPC-${AWS::StackName}'          
+
+  EgressInternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Environment
+          Value: ReadOnly
+        - Key: Name
+          Value: !Sub 'IGWCentralEgressVPC-${AWS::StackName}'  
+
+  #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-vpc-gateway-attachment.html      
+  IngressAttachIGW:  
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties: 
+      InternetGatewayId: !Ref IngressInternetGateway
+      VpcId: !Ref CentralIngressVPC
+
+  EgressAttachIGW:  
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties: 
+      InternetGatewayId: !Ref EgressInternetGateway
+      VpcId: !Ref CentralEgressVPC      
+
+  #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-eip.html
+  NATGatewayEIP1:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: !Sub 'EIP-NATGWCentralEgressPublicAZ1-${AWS::StackName}'  
+
+
+  NATGatewayEIP2:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: !Sub 'EIP-NATGWCentralEgressPublicAZ2-${AWS::StackName}'        
+
+  #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-natgateway.html 
+  AZ1NATGateway:
+    Type: AWS::EC2::NatGateway
+    Properties: 
+      AllocationId: !GetAtt NATGatewayEIP1.AllocationId
+      ConnectivityType: public
+      SubnetId: !Ref CentralEgressPublic1
+      Tags:
+        - Key: Name
+          Value: !Sub 'NATGWCentralEgressPublicAZ1-${AWS::StackName}'            
+  AZ2NATGateway:
+    Type: AWS::EC2::NatGateway
+    Properties: 
+      AllocationId: !GetAtt NATGatewayEIP2.AllocationId
+      ConnectivityType: public
+      SubnetId: !Ref CentralEgressPublic2
+      Tags:
+        - Key: Name
+          Value: !Sub 'NATGWCentralEgressPublicAZ2-${AWS::StackName}'  
+
+  #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-route.html          
+
+
+  #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-security-group.html
+  KuiperSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub 'KuiperSG-${AWS::StackName}'
+      GroupDescription: Security Group for Kuiper allowing HTTPS
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all traffic to all destination
+          IpProtocol: "-1"      
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          Description: HTTPS
+          IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+      VpcId: !Ref SharedInfrastructureVPC
+
+  PulseSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub 'PulseSG-${AWS::StackName}'
+      GroupDescription: Security Group for System Pulse allowing HTTP(S)
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all traffic to all destination
+          IpProtocol: "-1"      
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          Description: HTTPS
+          IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+        - CidrIp: 0.0.0.0/0
+          Description: HTTP
+          IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+      VpcId: !Ref SharedInfrastructureVPC
+
+  SQLSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub 'SQLSG-${AWS::StackName}'
+      GroupDescription: Security Group for Multipurpose SQL Server
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all traffic to all destination
+          IpProtocol: "-1"      
+      SecurityGroupIngress:
+        - SourceSecurityGroupId: !Ref KuiperSG
+          Description: ODBC
+          IpProtocol: tcp
+          FromPort: 1433
+          ToPort: 1433
+        - SourceSecurityGroupId: !Ref PulseSG
+          Description: ODBC
+          IpProtocol: tcp
+          FromPort: 1433
+          ToPort: 1433          
+      VpcId: !Ref SharedInfrastructureVPC
+
+  ICFGSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub 'ICFGSG-${AWS::StackName}'
+      GroupDescription: Security Group for Foreground Interconnect Servers
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all traffic to all destination
+          IpProtocol: "-1"      
+      SecurityGroupIngress:
+        - CidrIp: !Ref InspectionVPCCIDR
+          Description: HTTPS
+          IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443    
+      VpcId: !Ref EpicVPC     
+
+  HSWSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub 'HSWSG-${AWS::StackName}'
+      GroupDescription: Security Group for External HSW Servers
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all traffic to all destination
+          IpProtocol: "-1"      
+      SecurityGroupIngress:
+        - CidrIp: !Ref InspectionVPCCIDR
+          Description: HTTPS
+          IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443    
+      VpcId: !Ref EpicVPC
+
+  ODBSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub 'ODBSG-${AWS::StackName}'
+      GroupDescription: Security Group for Iris ODB
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all traffic to all destination
+          IpProtocol: "-1"      
+      SecurityGroupIngress:
+        - SourceSecurityGroupId: !Ref HSWSG
+          Description: EpicTCP
+          IpProtocol: tcp
+          FromPort: 4972
+          ToPort: 4972
+        - SourceSecurityGroupId: !Ref ICFGSG
+          Description: EpicTCP
+          IpProtocol: tcp
+          FromPort: 4972
+          ToPort: 4972
+        - CidrIp: !Ref SharedInfrastructureVPCCIDR
+          Description: EpicTCP
+          IpProtocol: tcp
+          FromPort: 4972
+          ToPort: 4972             
+      VpcId: !Ref EpicVPC        
+
+  CentralIngressSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub 'CentralIngressSG-${AWS::StackName}'
+      GroupDescription: Security Group for Inbound traffic from internet
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all traffic to all destination
+          IpProtocol: "-1"      
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          Description: HTTPS
+          IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443    
+      VpcId: !Ref CentralIngressVPC  
+
+  CentralEgressSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub 'CentralEgressSG-${AWS::StackName}'
+      GroupDescription: Security Group for outbound traffic to Internet
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all traffic to all destination
+          IpProtocol: "-1"      
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          Description: HTTPS
+          IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443    
+      VpcId: !Ref CentralEgressVPC        
+  InspectionSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub 'InspectionSG-${AWS::StackName}'
+      GroupDescription: Security Group for oInspection Firewall VPC
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all traffic to all destination
+          IpProtocol: "-1"      
+      SecurityGroupIngress:
+        - CidrIp: !Ref CentralIngressVPCCIDR
+          Description: HTTPS
+          IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443      
+      VpcId: !Ref InspectionVPC  
+
+Outputs: 
+  KuiperSG:
+    Description:
+      Allow HTTPS traffic from anywhere to Kuiper servers and allow all outbound traffic
+    Export:
+      Name: EpicRO-KuiperSG
+    Value: !Ref "KuiperSG"
+  PulseSG:
+    Description:
+      Allow HTTPS traffic from anywhere to Pulse servers and allow all outbound traffic
+    Export:
+      Name: !Sub EpicRO-PulseSG
+    Value: !Ref "PulseSG"
+  SQLSG:
+    Description:
+      Allow ODBC traffic from Kuiper or SystemPulse SG and allow all outbound traffic
+    Export:
+      Name: !Sub EpicRO-SQLSG
+    Value: !Ref "SQLSG"  
+  ICFGSG:
+    Description:
+      Allow HTTPS traffic from Inspection Security Group and allow all outbound traffic
+    Export:
+      Name: !Sub EpicRO-ICFGSG
+    Value: !Ref "ICFGSG"
+  ODBSG:
+    Description:
+      Allow EpicTCP traffic from Pulse, Kuiper, ICFG, and HSW Security Groups and allow all outbound traffic
+    Export:
+      Name: !Sub EpicRO-ODBSG
+    Value: !Ref "ODBSG"      
+  HSWSG:
+    Description:
+      Allow HTTPS traffic from Inspection Security Group and allow all outbound traffic
+    Export:
+      Name: !Sub EpicRO-HSWSG
+    Value: !Ref "HSWSG"
+  CentralIngressSG:
+    Description:
+      Allow HTTPS traffic from anywhere and allow all outbound traffic
+    Export:
+      Name: !Sub EpicRO-CentralIngressSG
+    Value: !Ref "CentralIngressSG"
+  CentralEgressSG:
+    Description:
+      Allow HTTPS traffic from anywhere and allow all outbound traffic
+    Export:
+      Name: !Sub EpicRO-CentralEgressSG
+    Value: !Ref "CentralEgressSG"
+  InspectionSG:
+    Description:
+      Allow HTTPS traffic from Central Ingress SG and allow all outbound traffic
+    Export:
+      Name: !Sub EpicRO-InspectionSG
+    Value: !Ref "InspectionSG"                     
+
+
+
