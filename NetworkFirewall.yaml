@@ -1,0 +1,53 @@
+Parameters:
+  FWVPCId:
+    Description: VPC to create the firewall in
+    Type: AWS::EC2::VPC::Id
+  
+  FWSubnet1:
+    Type: AWS::EC2::Subnet::Id
+    Description: The first subnet to create the firewall in
+  
+  FWSubnet2:
+    Type: AWS::EC2::Subnet::Id
+    Description: The second subnet to create the firewall in
+
+Resources:
+  #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-networkfirewall-firewall.html
+  EpicFirewall:
+    Type: AWS::NetworkFirewall::Firewall
+    Properties:
+      FirewallName: EpicNetworkFirewall
+      FirewallPolicyArn: !Ref EpicFWPolicy
+      VpcId: !Ref FWVPCId
+      SubnetMappings:
+        - SubnetId: !Ref FWSubnet1
+        - SubnetId: !Ref FWSubnet2
+      Description: Firewall for Epic traffic incoming from Internet
+
+  #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-networkfirewall-firewallpolicy.html
+  EpicFWPolicy:
+    Type: AWS::NetworkFirewall::FirewallPolicy
+    Properties:
+      FirewallPolicyName: ManagedEpicFWPolicy
+      FirewallPolicy:
+        StatelessDefaultActions:
+          - 'aws:pass'
+        StatelessFragmentDefaultActions:
+          - 'aws:drop'
+      Description: Epic FW Policy containing AWS Managed stateful rule groups
+
+  #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-route.html
+  RouteInspectionTGW1toFW:
+    Type: AWS::EC2::Route
+    Properties:
+       RouteTableId: !ImportValue EpicRO-InspectionTGW1RT
+       DestinationCidrBlock: 0.0.0.0/0
+       VpcEndpointId: !Select [ 0, !Split [ ',', !Select [ 1 , !Split [ 'a:', !Join [ ',', !GetAtt EpicFirewall.EndpointIds ] ] ] ] ]
+
+  RouteInspectionTGW2toFW:
+    Type: AWS::EC2::Route
+    Properties:
+       RouteTableId: !ImportValue EpicRO-InspectionTGW2RT
+       DestinationCidrBlock: 0.0.0.0/0
+       VpcEndpointId: !Select [ 0, !Split [ ',', !Select [ 1 , !Split [ 'b:', !Join [ ',', !GetAtt EpicFirewall.EndpointIds ] ] ] ] ]
+      

@@ -1,19 +1,15 @@
 Parameters:
-  ServerVPCId:
-    Description: VPC to containing the Target EC2 Instances
+  LoadBalancerVPCId:
+    Description: VPC containing the Load Balancer
     Type: AWS::EC2::VPC::Id
 
-  ALBVPCId:
-    Description: VPC to create the ALBs in. This VPC must have an Internet Gateway
-    Type: AWS::EC2::VPC::Id
+  HSWCertificateARN:
+    Description: The Amazon Resource Name (ARN) of the certificate to use with Hyperspace Web
+    Type: String
 
-  HSWTargetServers:
-    Description: HSW Servers that will be load balanced
-    Type: List<AWS::EC2::Image::Id>
-
-  ICTargetServers:
-    Description: Interconnect Servers that will be load balanced for Haiku/Canto
-    Type: List<AWS::EC2::Image::Id>
+  ICFGCertificateARN:
+    Description: The Amazon Resource Name (ARN) of the certificate to use with Haiku/Canto
+    Type: String    
 
 Resources:
 #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-targetgroup.html
@@ -33,8 +29,12 @@ Resources:
       Port: 443
       Protocol: HTTPS
       ProtocolVersion: HTTP1
-      TargetType: instance
-      Targets: !Ref HSWTargetServers
+      TargetType: ip
+      Targets: 
+        - Id: !ImportValue EpicRO-HSW1IPAddress
+          AvailabilityZone: all        
+        - Id: !ImportValue EpicRO-HSW2IPAddress
+          AvailabilityZone: all        
       TargetGroupAttributes:
         - Key: deregistration_delay.timeout_seconds
           Value: 3600
@@ -44,11 +44,11 @@ Resources:
           Value: app_cookie
         - Key: stickiness.app_cookie.cookie_name
           Value: AWSHSWCOOKIE
-        - Key: stickiness.app_cookie_duration_seconds
+        - Key: stickiness.app_cookie.duration_seconds
           Value: 86400
-      VpcId: !Ref ServerVPCId                 
+      VpcId: !Ref LoadBalancerVPCId                 
 
-  ICTargetGroup:
+  ICFGTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       Name: !Sub "${AWS::StackName}-ICTargetGroup"
@@ -64,19 +64,72 @@ Resources:
       Port: 443
       Protocol: HTTPS
       ProtocolVersion: HTTP1
-      TargetType: instance
-      Targets: !Ref ICTargetServers
-      VpcId: !Ref ServerVPCId    
+      TargetType: ip
+      Targets: 
+        - Id: !ImportValue EpicRO-IC1IPAddress
+          AvailabilityZone: all
+        - Id: !ImportValue EpicRO-IC2IPAddress
+          AvailabilityZone: all        
+      VpcId: !Ref LoadBalancerVPCId    
 
 #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-loadbalancer.html
   HSWALB:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties: 
       IpAddressType: ipv4
-      LoadBalancerAttributes: 
-        - Key: routing.http.xff_header_processing.mode
-          Value: append
       Name: !Sub "${AWS::StackName}-HSWALB"
       Scheme: internet-facing
-      Subnets: !Ref 
+      Subnets: 
+        - !ImportValue EpicRO-CentralIngressPublic1
+        - !ImportValue EpicRO-CentralIngressPublic2
       Type: application
+
+  ICFGALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties: 
+      IpAddressType: ipv4
+      Name: !Sub "${AWS::StackName}-ICFGALB"
+      Scheme: internet-facing
+      Subnets:
+        - !ImportValue EpicRO-CentralIngressPublic1
+        - !ImportValue EpicRO-CentralIngressPublic2      
+      Type: application    
+
+  #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-listener.html
+  HSWListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties: 
+      Certificates: 
+        - CertificateArn: !Ref HSWCertificateARN    
+      DefaultActions: 
+        - Type: forward
+          TargetGroupArn: !Ref HSWTargetGroup
+      LoadBalancerArn: !Ref HSWALB
+      Port: 443
+      Protocol: HTTPS
+
+  ICFGListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties: 
+      Certificates: 
+        - CertificateArn: !Ref ICFGCertificateARN   
+      DefaultActions: 
+        - Type: forward
+          TargetGroupArn: !Ref ICFGTargetGroup      
+      LoadBalancerArn: !Ref ICFGALB        
+      Port: 443
+      Protocol: HTTPS
+       
+
+Outputs:
+  HSWALB:
+    Description: Hyperspace Web Application Load Balancer
+    Export: 
+      Name: EpicRO-HSWALB
+    Value: !Ref HSWALB
+
+  ICFGALB:
+    Description: Interconnect Application Load Balancer
+    Export: 
+      Name: EpicRO-ICFGALB
+    Value: !Ref ICFGALB    

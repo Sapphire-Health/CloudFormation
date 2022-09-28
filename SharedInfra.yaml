@@ -122,6 +122,11 @@ Parameters:
     Type: AWS::EC2::Subnet::Id
     Description: The subnet to create HA (Second) VM in. Will only be created if HA is set to 'Yes'
   
+  DirectoryName:
+    Type: String
+    Description: The name of the AWS managed Microsoft AD to join the servers to
+    Default: corp.company.com
+
   HA:
     Description: Should HA be added for Kuiper and System Pulse
     Type: String
@@ -192,13 +197,38 @@ Mappings:
       SQLEnterprise: ami-035277a0ef845e843     
   
 Resources:
+  #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-iam-role.html
+  EC2InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+      Description: IAM Role used by WSS VMs to Systems Manager core functionality, Domain Join, and Install/Run the Cloudwatch agent.
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/AmazonSSMDirectoryServiceAccess
+        - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+        
+  #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-iam-instanceprofile.html          
+  EC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles:
+        - !Ref EC2InstanceRole      
   #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-networkinterface.html
   KuiperNIC1:
     Type: AWS::EC2::NetworkInterface
     Properties:
       Description: !Sub 'NIC for ${KuiperServerName}1'
       GroupSet:
-        - !ImportValue KuiperSG
+        - !ImportValue EpicRO-KuiperSG
       PrivateIpAddress: !Ref Kuiper1IP
       SubnetId: !Ref ServerSubnet1
       Tags:
@@ -211,7 +241,7 @@ Resources:
     Properties:
       Description: !Sub 'NIC for ${KuiperServerName}2'
       GroupSet:
-        - !ImportValue KuiperSG
+        - !ImportValue EpicRO-KuiperSG
       PrivateIpAddress: !Ref Kuiper2IP
       SubnetId: !Ref ServerSubnet2
       Tags:
@@ -223,7 +253,7 @@ Resources:
     Properties:
       Description: !Sub 'NIC for ${PulseServerName}1'
       GroupSet:
-        - !ImportValue PulseSG
+        - !ImportValue EpicRO-PulseSG
       PrivateIpAddress: !Ref Pulse1IP
       SubnetId: !Ref ServerSubnet1
       Tags:
@@ -236,7 +266,7 @@ Resources:
     Properties:
       Description: !Sub 'NIC for ${PulseServerName}2'
       GroupSet:
-        - !ImportValue PulseSG
+        - !ImportValue EpicRO-PulseSG
       PrivateIpAddress: !Ref Pulse2IP
       SubnetId: !Ref ServerSubnet2
       Tags:
@@ -248,7 +278,7 @@ Resources:
     Properties:
       Description: !Sub 'NIC for ${SQLServerName}'
       GroupSet:
-        - !ImportValue SQLSG
+        - !ImportValue EpicRO-SQLSG
       PrivateIpAddress: !Ref SQLIP
       SubnetId: !Ref ServerSubnet1
       Tags:
@@ -266,6 +296,7 @@ Resources:
           VolumeType: "gp3"
           DeleteOnTermination: "false"
           VolumeSize: "50"      
+      IamInstanceProfile: !Ref EC2InstanceProfile           
       ImageId: !FindInMap [RegionMap, !Ref 'AWS::Region', !Ref ServerOS]
       InstanceType: !Ref KuiperInstanceType
       KeyName: !Ref KeyPairName
@@ -287,6 +318,7 @@ Resources:
           VolumeType: "gp3"
           DeleteOnTermination: "false"
           VolumeSize: "50"      
+      IamInstanceProfile: !Ref EC2InstanceProfile           
       ImageId: !FindInMap [RegionMap, !Ref 'AWS::Region', !Ref ServerOS]
       InstanceType: !Ref KuiperInstanceType
       KeyName: !Ref KeyPairName
@@ -307,6 +339,7 @@ Resources:
           VolumeType: "gp3"
           DeleteOnTermination: "false"
           VolumeSize: "50"      
+      IamInstanceProfile: !Ref EC2InstanceProfile           
       ImageId: !FindInMap [RegionMap, !Ref 'AWS::Region', !Ref ServerOS]
       InstanceType: !Ref PulseInstanceType
       KeyName: !Ref KeyPairName
@@ -327,7 +360,8 @@ Resources:
         Ebs: 
           VolumeType: "gp3"
           DeleteOnTermination: "false"
-          VolumeSize: "50"      
+          VolumeSize: "50"     
+      IamInstanceProfile: !Ref EC2InstanceProfile            
       ImageId: !FindInMap [RegionMap, !Ref 'AWS::Region', !Ref ServerOS]
       InstanceType: !Ref PulseInstanceType
       KeyName: !Ref KeyPairName
@@ -338,7 +372,7 @@ Resources:
         - Key: Name
           Value: !Sub ${PulseServerName}2
 
-  SQLServer:
+  SQLServer1:
     Type: AWS::EC2::Instance
     Properties: 
       AvailabilityZone: !Select [0, Fn::GetAZs: !Ref AWS::Region]
@@ -347,7 +381,8 @@ Resources:
         Ebs: 
           VolumeType: "gp3"
           DeleteOnTermination: "false"
-          VolumeSize: "70"      
+          VolumeSize: "70"     
+      IamInstanceProfile: !Ref EC2InstanceProfile            
       ImageId: !FindInMap [RegionMap, !Ref 'AWS::Region', !Ref SQLVersion]
       InstanceType: !Ref SQLInstanceType
       KeyName: !Ref KeyPairName
@@ -358,5 +393,95 @@ Resources:
         - Key: Name
           Value: !Sub ${SQLServerName}1
 
+  Kuiper1JoinADAssociation:
+    Type: AWS::SSM::Association
+    Properties:
+      AssociationName: !Sub ${KuiperServerName}1-EpicRO-AWS-Join-Directory-Service-Domain-Association
+      Name: AWS-JoinDirectoryServiceDomain
+      Parameters:
+        directoryId:
+          - !ImportValue EpicRO-MSAD
+        directoryName:
+          - !Ref DirectoryName
+        dnsIpAddresses:
+          - !ImportValue EpicRO-MSADDNSIP1
+          - !ImportValue EpicRO-MSADDNSIP2
+      Targets:
+        - Key: InstanceIds
+          Values:
+            - !Ref KuiperServer1
+
+  Kuiper2JoinADAssociation:
+    Type: AWS::SSM::Association
+    Condition: HA
+    Properties:
+      AssociationName: !Sub ${PulseServerName}2-EpicRO-AWS-Join-Directory-Service-Domain-Association
+      Name: AWS-JoinDirectoryServiceDomain
+      Parameters:
+        directoryId:
+          - !ImportValue EpicRO-MSAD
+        directoryName:
+          - !Ref DirectoryName
+        dnsIpAddresses:
+          - !ImportValue EpicRO-MSADDNSIP1
+          - !ImportValue EpicRO-MSADDNSIP2
+      Targets:
+        - Key: InstanceIds
+          Values:
+            - !Ref PulseServer2         
+
+  Pulse1JoinADAssociation:
+    Type: AWS::SSM::Association
+    Properties:
+      AssociationName: !Sub ${PulseServerName}1-EpicRO-AWS-Join-Directory-Service-Domain-Association
+      Name: AWS-JoinDirectoryServiceDomain
+      Parameters:
+        directoryId:
+          - !ImportValue EpicRO-MSAD
+        directoryName:
+          - !Ref DirectoryName
+        dnsIpAddresses:
+          - !ImportValue EpicRO-MSADDNSIP1
+          - !ImportValue EpicRO-MSADDNSIP2
+      Targets:
+        - Key: InstanceIds
+          Values:
+            - !Ref KuiperServer1
+
+  Pulse2JoinADAssociation:
+    Type: AWS::SSM::Association
+    Condition: HA
+    Properties:
+      AssociationName: !Sub ${PulseServerName}2-EpicRO-AWS-Join-Directory-Service-Domain-Association
+      Name: AWS-JoinDirectoryServiceDomain
+      Parameters:
+        directoryId:
+          - !ImportValue EpicRO-MSAD
+        directoryName:
+          - !Ref DirectoryName
+        dnsIpAddresses:
+          - !ImportValue EpicRO-MSADDNSIP1
+          - !ImportValue EpicRO-MSADDNSIP2
+      Targets:
+        - Key: InstanceIds
+          Values:
+            - !Ref PulseServer2                 
          
-  
+
+  SQL1JoinADAssociation:
+    Type: AWS::SSM::Association
+    Properties:
+      AssociationName: !Sub ${SQLServerName}1-EpicRO-AWS-Join-Directory-Service-Domain-Association
+      Name: AWS-JoinDirectoryServiceDomain
+      Parameters:
+        directoryId:
+          - !ImportValue EpicRO-MSAD
+        directoryName:
+          - !Ref DirectoryName
+        dnsIpAddresses:
+          - !ImportValue EpicRO-MSADDNSIP1
+          - !ImportValue EpicRO-MSADDNSIP2
+      Targets:
+        - Key: InstanceIds
+          Values:
+            - !Ref SQLServer1 

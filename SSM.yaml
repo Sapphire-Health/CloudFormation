@@ -1,0 +1,42 @@
+Parameters:
+
+  Instances:
+    Description: List of instances to domain join
+    Type: List<AWS::EC2::Instance::Id>
+    
+  MSAD:
+    Description: AWS Microsoft AD ARN
+    Type: String
+  
+  MSADDnsIpAddress1:
+    Description: IP address of the DNS server 1 for the directory
+    Type: String
+    
+  MSADDnsIpAddress2:
+    Description: IP address of the DNS server 2 for the directory  
+    Type: String
+    
+  MSADName:
+    Description: Name of the Microsoft AD Instance
+    Type: String
+
+Resources:
+  #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ssm-association.html
+  AWSJoinDirectoryServiceDomainAssociation:
+    Type: AWS::SSM::Association
+    Properties:
+      AssociationName: EpicRO-AWS-Join-Directory-Service-Domain-Association
+      Name: AWS-JoinDirectoryServiceDomain
+      Parameters:
+        directoryId:
+          - !Ref MSAD
+        directoryName:
+          - !Ref MSADName
+        dnsIpAddresses:
+          - !Ref MSADDnsIpAddress1
+          - !Ref MSADDnsIpAddress2
+      Targets:
+        - Key: InstanceIds
+          Values:
+            - !Ref Instance
+      

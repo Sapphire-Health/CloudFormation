@@ -114,7 +114,7 @@ Resources:
     Type: AWS::EC2::Subnet
     Properties: 
       AvailabilityZone: !Select [0, Fn::GetAZs: !Ref AWS::Region]
-      CidrBlock: !Select [ 0, !Cidr [ !GetAtt CentralIngressVPC.CidrBlock, 2, 4 ] ]
+      CidrBlock: !Select [ 0, !Cidr [ !GetAtt CentralIngressVPC.CidrBlock, 4, 4 ] ]
       MapPublicIpOnLaunch: 'False'
       VpcId: !Ref CentralIngressVPC
       Tags:
@@ -124,17 +124,37 @@ Resources:
     Type: AWS::EC2::Subnet
     Properties: 
       AvailabilityZone: !Select [1, Fn::GetAZs: !Ref AWS::Region]
-      CidrBlock: !Select [ 1, !Cidr [ !GetAtt CentralIngressVPC.CidrBlock, 2, 4 ] ]
+      CidrBlock: !Select [ 1, !Cidr [ !GetAtt CentralIngressVPC.CidrBlock, 4, 4 ] ]
       MapPublicIpOnLaunch: 'False'
       VpcId: !Ref CentralIngressVPC
       Tags:
         - Key: Name
-          Value: !Sub 'CentralIngressPublicAZ2-${AWS::StackName}'               
+          Value: !Sub 'CentralIngressPublicAZ2-${AWS::StackName}'
+  CentralIngressPrivate1:
+    Type: AWS::EC2::Subnet
+    Properties: 
+      AvailabilityZone: !Select [0, Fn::GetAZs: !Ref AWS::Region]
+      CidrBlock: !Select [ 2, !Cidr [ !GetAtt CentralIngressVPC.CidrBlock, 4, 4 ] ]
+      MapPublicIpOnLaunch: 'False'
+      VpcId: !Ref CentralIngressVPC
+      Tags:
+        - Key: Name
+          Value: !Sub 'CentralIngressPrivateAZ1-${AWS::StackName}'      
+  CentralIngressPrivate2:
+    Type: AWS::EC2::Subnet
+    Properties: 
+      AvailabilityZone: !Select [1, Fn::GetAZs: !Ref AWS::Region]
+      CidrBlock: !Select [ 3, !Cidr [ !GetAtt CentralIngressVPC.CidrBlock, 4, 4 ] ]
+      MapPublicIpOnLaunch: 'False'
+      VpcId: !Ref CentralIngressVPC
+      Tags:
+        - Key: Name
+          Value: !Sub 'CentralIngressPrivateAZ2-${AWS::StackName}'                            
   CentralEgressPublic1:
     Type: AWS::EC2::Subnet
     Properties: 
       AvailabilityZone: !Select [0, Fn::GetAZs: !Ref AWS::Region]
-      CidrBlock: !Select [ 0, !Cidr [ !GetAtt CentralEgressVPC.CidrBlock, 2, 4 ] ]
+      CidrBlock: !Select [ 0, !Cidr [ !GetAtt CentralEgressVPC.CidrBlock, 4, 4 ] ]
       MapPublicIpOnLaunch: 'False'
       VpcId: !Ref CentralEgressVPC
       Tags:
@@ -144,17 +164,37 @@ Resources:
     Type: AWS::EC2::Subnet
     Properties: 
       AvailabilityZone: !Select [1, Fn::GetAZs: !Ref AWS::Region]
-      CidrBlock: !Select [ 1, !Cidr [ !GetAtt CentralEgressVPC.CidrBlock, 2, 4 ] ]
+      CidrBlock: !Select [ 1, !Cidr [ !GetAtt CentralEgressVPC.CidrBlock, 4, 4 ] ]
       MapPublicIpOnLaunch: 'False'
       VpcId: !Ref CentralEgressVPC
       Tags:
         - Key: Name
           Value: !Sub 'CentralEgressPublicAZ2-${AWS::StackName}'  
+  CentralEgressPrivate1:
+    Type: AWS::EC2::Subnet
+    Properties: 
+      AvailabilityZone: !Select [0, Fn::GetAZs: !Ref AWS::Region]
+      CidrBlock: !Select [ 2, !Cidr [ !GetAtt CentralEgressVPC.CidrBlock, 4, 4 ] ]
+      MapPublicIpOnLaunch: 'False'
+      VpcId: !Ref CentralEgressVPC
+      Tags:
+        - Key: Name
+          Value: !Sub 'CentralEgressPrivateAZ1-${AWS::StackName}'      
+  CentralEgressPrivate2:
+    Type: AWS::EC2::Subnet
+    Properties: 
+      AvailabilityZone: !Select [1, Fn::GetAZs: !Ref AWS::Region]
+      CidrBlock: !Select [ 3, !Cidr [ !GetAtt CentralEgressVPC.CidrBlock, 4, 4 ] ]
+      MapPublicIpOnLaunch: 'False'
+      VpcId: !Ref CentralEgressVPC
+      Tags:
+        - Key: Name
+          Value: !Sub 'CentralEgressPrivateAZ2-${AWS::StackName}'          
   InspectionPrivate1:
     Type: AWS::EC2::Subnet
     Properties: 
       AvailabilityZone: !Select [0, Fn::GetAZs: !Ref AWS::Region]
-      CidrBlock: !Select [ 0, !Cidr [ !GetAtt InspectionVPC.CidrBlock, 2, 4 ] ]
+      CidrBlock: !Select [ 0, !Cidr [ !GetAtt InspectionVPC.CidrBlock, 4, 4 ] ]
       MapPublicIpOnLaunch: 'False'
       VpcId: !Ref InspectionVPC
       Tags:
@@ -164,12 +204,32 @@ Resources:
     Type: AWS::EC2::Subnet
     Properties: 
       AvailabilityZone: !Select [1, Fn::GetAZs: !Ref AWS::Region]
-      CidrBlock: !Select [ 1, !Cidr [ !GetAtt InspectionVPC.CidrBlock, 2, 4 ] ]
+      CidrBlock: !Select [ 1, !Cidr [ !GetAtt InspectionVPC.CidrBlock, 4, 4 ] ]
       MapPublicIpOnLaunch: 'False'
       VpcId: !Ref InspectionVPC
       Tags:
         - Key: Name
-          Value: !Sub 'InspectionPrivateAZ2-${AWS::StackName}'              
+          Value: !Sub 'InspectionPrivateAZ2-${AWS::StackName}'        
+  InspectionTGW1:
+    Type: AWS::EC2::Subnet
+    Properties: 
+      AvailabilityZone: !Select [0, Fn::GetAZs: !Ref AWS::Region]
+      CidrBlock: !Select [ 2, !Cidr [ !GetAtt InspectionVPC.CidrBlock, 4, 4 ] ]
+      MapPublicIpOnLaunch: 'False'
+      VpcId: !Ref InspectionVPC
+      Tags:
+        - Key: Name
+          Value: !Sub 'InspectionTGW1-${AWS::StackName}'    
+  InspectionTGW2:
+    Type: AWS::EC2::Subnet
+    Properties: 
+      AvailabilityZone: !Select [1, Fn::GetAZs: !Ref AWS::Region]
+      CidrBlock: !Select [ 3, !Cidr [ !GetAtt InspectionVPC.CidrBlock, 4, 4 ] ]
+      MapPublicIpOnLaunch: 'False'
+      VpcId: !Ref InspectionVPC
+      Tags:
+        - Key: Name
+          Value: !Sub 'InspectionTGW2-${AWS::StackName}'                             
   SharedInfrastructurePrivate1:
     Type: AWS::EC2::Subnet
     Properties: 
@@ -236,6 +296,20 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub 'CentralIngressPublicAZ2-RT-${AWS::StackName}'  
+  CentralIngressPrivate1RT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref CentralIngressVPC
+      Tags:
+        - Key: Name
+          Value: !Sub 'CentralIngressPrivateAZ1-RT-${AWS::StackName}'
+  CentralIngressPrivate2RT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref CentralIngressVPC
+      Tags:
+        - Key: Name
+          Value: !Sub 'CentralIngressPrivateAZ2-RT-${AWS::StackName}'            
   CentralEgressPublic1RT:
     Type: AWS::EC2::RouteTable
     Properties:
@@ -250,49 +324,77 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub 'CentralEgressPublicAZ2-RT-${AWS::StackName}'
-  Inspection1RT:
+  CentralEgressPrivate1RT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref CentralEgressVPC
+      Tags:
+        - Key: Name
+          Value: !Sub 'CentralEgressPrivateAZ1-RT-${AWS::StackName}'
+  CentralEgressPrivate2RT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref CentralEgressVPC
+      Tags:
+        - Key: Name
+          Value: !Sub 'CentralEgressPrivateAZ2-RT-${AWS::StackName}'          
+  InspectionPrivate1RT:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref InspectionVPC
       Tags:
         - Key: Name
           Value: !Sub 'InspectionPrivateAZ1-RT-${AWS::StackName}'
-  Inspection2RT:
+  InspectionPrivate2RT:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref InspectionVPC
       Tags:
         - Key: Name
           Value: !Sub 'InspectionPrivateAZ2-RT-${AWS::StackName}'
-  SharedInfrastructure1RT:
+  InspectionTGW1RT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref InspectionVPC
+      Tags:
+        - Key: Name
+          Value: !Sub 'InspectionTGW1-RT-${AWS::StackName}'          
+  InspectionTGW2RT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref InspectionVPC
+      Tags:
+        - Key: Name
+          Value: !Sub 'InspectionTGW2-RT-${AWS::StackName}'                    
+  SharedInfrastructurePrivate1RT:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref SharedInfrastructureVPC
       Tags:
         - Key: Name
           Value: !Sub 'SharedInfrastructurePrivateAZ1-RT-${AWS::StackName}'
-  SharedInfrastructure2RT:
+  SharedInfrastructurePrivate2RT:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref SharedInfrastructureVPC
       Tags:
         - Key: Name
           Value: !Sub 'SharedInfrastructurePrivateAZ2-RT-${AWS::StackName}'
-  EpicWSS1RT:
+  EpicWSSPrivate1RT:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref EpicVPC
       Tags:
         - Key: Name
           Value: !Sub 'EpicWSSPrivateAZ1-RT-${AWS::StackName}'
-  EpicWSS2RT:
+  EpicWSSPrivate2RT:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref EpicVPC
       Tags:
         - Key: Name
           Value: !Sub 'EpicWSSPrivateAZ2-RT-${AWS::StackName}'
-  ODB1RT:
+  ODBPrivate1RT:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref EpicVPC
@@ -300,15 +402,248 @@ Resources:
         - Key: Name
           Value: !Sub 'ODBPrivateAZ1-RT-${AWS::StackName}'
 
+  #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-subnetroutetableassociation.html
+  CentralIngressPublic1RTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref CentralIngressPublic1
+      RouteTableId: !Ref CentralIngressPublic1RT
+
+  CentralIngressPublic2RTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref CentralIngressPublic2
+      RouteTableId: !Ref CentralIngressPublic2RT
+
+  CentralIngressPrivate1RTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref CentralIngressPrivate1
+      RouteTableId: !Ref CentralIngressPrivate1RT
+
+  CentralIngressPrivate2RTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref CentralIngressPrivate2
+      RouteTableId: !Ref CentralIngressPrivate2RT
+
+  CentralEgressPublic1RTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref CentralEgressPublic1
+      RouteTableId: !Ref CentralEgressPublic1RT
+
+  CentralEgressPublic2RTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref CentralEgressPublic2
+      RouteTableId: !Ref CentralEgressPublic2RT
+
+  CentralEgressPrivate1RTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref CentralEgressPrivate1
+      RouteTableId: !Ref CentralEgressPrivate1RT
+
+  CentralEgressPrivate2RTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref CentralEgressPrivate2
+      RouteTableId: !Ref CentralEgressPrivate2RT
+
+  InspectionPrivate1RTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref InspectionPrivate1
+      RouteTableId: !Ref InspectionPrivate1RT
+
+  InspectionPrivate2RTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref InspectionPrivate2
+      RouteTableId: !Ref InspectionPrivate2RT
+
+  InspectionTGW1RTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref InspectionTGW1
+      RouteTableId: !Ref InspectionTGW1RT
+
+  InspectionTGW2RTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref InspectionTGW2
+      RouteTableId: !Ref InspectionTGW2RT
+
+  SharedInfrastructurePrivate1RTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref SharedInfrastructurePrivate1
+      RouteTableId: !Ref SharedInfrastructurePrivate1RT
+
+  SharedInfrastructurePrivate2RTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref SharedInfrastructurePrivate2
+      RouteTableId: !Ref SharedInfrastructurePrivate2RT
+
+  EpicWSS1RTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref WSSPrivate1
+      RouteTableId: !Ref EpicWSSPrivate1RT
+
+  EpicWSS2RTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref WSSPrivate2
+      RouteTableId: !Ref EpicWSSPrivate2RT
+
+  ODBPrivate1RTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref ODBPrivate1
+      RouteTableId: !Ref ODBPrivate1RT
+
+  #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-route.html
+  RouteIngress1toIGW:
+    Type: AWS::EC2::Route
+    Properties:
+       RouteTableId: !Ref CentralIngressPublic1RT
+       DestinationCidrBlock: 0.0.0.0/0
+       GatewayId: !Ref IngressInternetGateway
+
+  RouteIngress2toIGW:
+    Type: AWS::EC2::Route
+    Properties:
+       RouteTableId: !Ref CentralIngressPublic2RT
+       DestinationCidrBlock: 0.0.0.0/0
+       GatewayId: !Ref IngressInternetGateway    
+
+  RouteIngress1toSharedInfraInspection:
+    Type: AWS::EC2::Route
+    Properties:
+       RouteTableId: !Ref CentralIngressPublic1RT
+       DestinationCidrBlock: !Ref SharedInfrastructureVPCCIDR
+       VpcPeeringConnectionId: !Ref IngressToInspection
+
+  RouteIngress2toSharedInfraInspection:
+    Type: AWS::EC2::Route
+    Properties:
+       RouteTableId: !Ref CentralIngressPublic2RT
+       DestinationCidrBlock: !Ref SharedInfrastructureVPCCIDR
+       VpcPeeringConnectionId: !Ref IngressToInspection
+
+  RouteIngress1toEpicInspection:
+    Type: AWS::EC2::Route
+    Properties:
+       RouteTableId: !Ref CentralIngressPublic1RT
+       DestinationCidrBlock: !Ref EpicVPCCIDR
+       VpcPeeringConnectionId: !Ref IngressToInspection
+
+  RouteIngress2toEpicInspection:
+    Type: AWS::EC2::Route
+    Properties:
+       RouteTableId: !Ref CentralIngressPublic2RT
+       DestinationCidrBlock: !Ref EpicVPCCIDR
+       VpcPeeringConnectionId: !Ref IngressToInspection
+
+  RouteEgressPublic1toIGW:
+    Type: AWS::EC2::Route
+    Properties:
+       RouteTableId: !Ref CentralEgressPublic1RT
+       DestinationCidrBlock: 0.0.0.0/0
+       GatewayId: !Ref EgressInternetGateway
+
+  RouteEgressPublic2toIGW:
+    Type: AWS::EC2::Route
+    Properties:
+       RouteTableId: !Ref CentralEgressPublic2RT
+       DestinationCidrBlock: 0.0.0.0/0
+       GatewayId: !Ref EgressInternetGateway       
+
+  RouteEgressPrivate1toNGW:
+    Type: AWS::EC2::Route
+    Properties:
+       RouteTableId: !Ref CentralEgressPrivate1RT
+       DestinationCidrBlock: 0.0.0.0/0
+       NatGatewayId: !Ref AZ1NATGateway
+
+  RouteEgressPrivate2toNGW:
+    Type: AWS::EC2::Route
+    Properties:
+       RouteTableId: !Ref CentralEgressPrivate2RT
+       DestinationCidrBlock: 0.0.0.0/0
+       NatGatewayId: !Ref AZ2NATGateway
+
+  RouteInspection1toTGW:
+    Type: AWS::EC2::Route
+    DependsOn: EpicTransitGateway
+    Properties:
+       RouteTableId: !Ref InspectionPrivate1RT
+       DestinationCidrBlock: 0.0.0.0/0
+       TransitGatewayId: !Ref EpicTransitGateway
+
+  RouteInspection2toTGW:
+    Type: AWS::EC2::Route
+    DependsOn: EpicTransitGateway    
+    Properties:
+       RouteTableId: !Ref InspectionPrivate2RT
+       DestinationCidrBlock: 0.0.0.0/0
+       TransitGatewayId: !Ref EpicTransitGateway  
+
+  RouteSharedInfrastructure1toTGW:
+    Type: AWS::EC2::Route
+    DependsOn: EpicTransitGateway    
+    Properties:
+       RouteTableId: !Ref SharedInfrastructurePrivate1RT
+       DestinationCidrBlock: 0.0.0.0/0
+       TransitGatewayId: !Ref EpicTransitGateway
+
+  RouteSharedInfrastructure2toTGW:
+    Type: AWS::EC2::Route
+    DependsOn: EpicTransitGateway    
+    Properties:
+       RouteTableId: !Ref SharedInfrastructurePrivate2RT
+       DestinationCidrBlock: 0.0.0.0/0
+       TransitGatewayId: !Ref EpicTransitGateway  
+
+  RouteWSS1toTGW:
+    Type: AWS::EC2::Route
+    DependsOn: EpicTransitGateway    
+    Properties:
+       RouteTableId: !Ref EpicWSSPrivate1RT
+       DestinationCidrBlock: 0.0.0.0/0
+       TransitGatewayId: !Ref EpicTransitGateway
+
+  RouteWSS2toTGW:
+    Type: AWS::EC2::Route
+    DependsOn: EpicTransitGateway    
+    Properties:
+       RouteTableId: !Ref EpicWSSPrivate2RT
+       DestinationCidrBlock: 0.0.0.0/0
+       TransitGatewayId: !Ref EpicTransitGateway       
+
+  RouteODB1toTGW:
+    Type: AWS::EC2::Route
+    DependsOn: EpicTransitGateway    
+    Properties:
+       RouteTableId: !Ref ODBPrivate1RT
+       DestinationCidrBlock: 0.0.0.0/0
+       TransitGatewayId: !Ref EpicTransitGateway          
+
   #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-transitgatewayattachment.html
   InspectionVPCTGWAttach:
     Type: AWS::EC2::TransitGatewayAttachment
     Properties: 
       SubnetIds: 
-        - !Ref InspectionPrivate1
-        - !Ref InspectionPrivate2
+        - !Ref InspectionTGW1
+        - !Ref InspectionTGW2
       TransitGatewayId: !Ref EpicTransitGateway
       VpcId: !Ref InspectionVPC
+      Tags:
+        - Key: Name
+          Value: InspectionVPC-TGWAttachment
 
   SharedInfraVPCTGWAttach:
     Type: AWS::EC2::TransitGatewayAttachment
@@ -318,6 +653,9 @@ Resources:
         - !Ref SharedInfrastructurePrivate2
       TransitGatewayId: !Ref EpicTransitGateway
       VpcId: !Ref SharedInfrastructureVPC      
+      Tags:
+        - Key: Name
+          Value: SharedInfrastructureVPC-TGWAttachment    
 
   EpicVPCTGWAttach:
     Type: AWS::EC2::TransitGatewayAttachment
@@ -326,7 +664,46 @@ Resources:
         - !Ref WSSPrivate1
         - !Ref WSSPrivate2
       TransitGatewayId: !Ref EpicTransitGateway
-      VpcId: !Ref EpicVPC                                  
+      VpcId: !Ref EpicVPC                    
+      Tags:
+        - Key: Name
+          Value: EpicVPC-TGWAttachment              
+
+  CentralEgressVPCTGWAttach:
+    Type: AWS::EC2::TransitGatewayAttachment
+    Properties: 
+      SubnetIds: 
+        - !Ref CentralEgressPrivate1
+        - !Ref CentralEgressPrivate2
+      TransitGatewayId: !Ref EpicTransitGateway
+      VpcId: !Ref CentralEgressVPC                    
+      Tags:
+        - Key: Name
+          Value: CentralEgressVPC-TGWAttachment 
+
+  #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-transitgatewayroutetable.html
+  CentralEgressVPCTGWRT:
+    Type: AWS::EC2::TransitGatewayRouteTable
+    Properties: 
+      TransitGatewayId: !Ref EpicTransitGateway
+      Tags: 
+        - Key: Name
+          Value: CentralEgressVPC-RT
+
+  #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-transitgatewayroutetableassociation.html
+  CentralEgressVPCRTAssociation:
+    Type: AWS::EC2::TransitGatewayRouteTableAssociation
+    Properties: 
+      TransitGatewayAttachmentId: !Ref CentralEgressVPCTGWAttach
+      TransitGatewayRouteTableId: !Ref CentralEgressVPCTGWRT
+   
+  #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-transitgatewayroute.html
+  EgressToNGWRoute:
+    Type: AWS::EC2::TransitGatewayRoute
+    Properties: 
+      DestinationCidrBlock: 0.0.0.0/0
+      TransitGatewayAttachmentId: !Ref CentralEgressVPCTGWAttach
+      TransitGatewayRouteTableId: !Ref CentralEgressVPCTGWRT     
 
   #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-vpcpeeringconnection.html
   IngressToInspection:
@@ -404,9 +781,6 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub 'NATGWCentralEgressPublicAZ2-${AWS::StackName}'  
-
-  #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-route.html          
-
 
   #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-security-group.html
   KuiperSG:
@@ -528,7 +902,7 @@ Resources:
           Description: EpicTCP
           IpProtocol: tcp
           FromPort: 4972
-          ToPort: 4972             
+          ToPort: 4972       
       VpcId: !Ref EpicVPC        
 
   CentralIngressSG:
@@ -551,7 +925,7 @@ Resources:
   CentralEgressSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupName: !Sub 'CentralEgressSG-${AWS::StackName}'
+      GroupName: !Sub 'Central-EgressSG-${AWS::StackName}'
       GroupDescription: Security Group for outbound traffic to Internet
       SecurityGroupEgress:
         - CidrIp: 0.0.0.0/0
@@ -582,6 +956,144 @@ Resources:
       VpcId: !Ref InspectionVPC  
 
 Outputs: 
+  CentralIngressVPC:
+    Description: Central Ingress VPC
+    Export:
+      Name: EpicRO-CentralIngressVPC
+    Value: !Ref CentralIngressVPC
+
+  CentralEgressVPC:
+    Description: Central Egress VPC
+    Export:
+      Name: EpicRO-CentralEgressVPC
+    Value: !Ref CentralEgressVPC  
+
+  InspectionVPC:
+    Description: Inspection VPC
+    Export:
+      Name: EpicRO-InspectionVPC
+    Value: !Ref InspectionVPC  
+
+  SharedInfrastructureVPC:
+    Description: Shared Infrastructure VPC
+    Export:
+      Name: EpicRO-SharedInfrastructureVPC
+    Value: !Ref SharedInfrastructureVPC
+
+  EpicVPC:
+    Description: Epic VPC
+    Export:
+      Name: EpicRO-EpicVPC
+    Value: !Ref EpicVPC
+
+  EpicTGW:
+    Description: Epic Transit Gateway
+    Export:
+      Name: EpicRO-EpicTGW
+    Value: !Ref EpicTransitGateway
+
+  CentralIngressPublicSubnet1:
+    Description: Central Ingress Public Subnet in AZ1
+    Export:
+      Name: EpicRO-CentralIngressPublic1
+    Value: !Ref CentralIngressPublic1
+
+  CentralIngressPublicSubnet2:
+    Description: Central Ingress Public Subnet in AZ2
+    Export:
+      Name: EpicRO-CentralIngressPublic2
+    Value: !Ref CentralIngressPublic2
+
+  CentralIngressPrivateSubnet1:
+    Description: Central Ingress Private Subnet in AZ1
+    Export:
+      Name: EpicRO-CentralIngressPrivate1
+    Value: !Ref CentralIngressPrivate1
+
+  CentralIngressPrivateSubnet2:
+    Description: Central Ingress Private Subnet in AZ2
+    Export:
+      Name: EpicRO-CentralIngressPrivate2
+    Value: !Ref CentralIngressPrivate2
+
+  CentralEgressPublicSubnet1:
+    Description: Central Egress Public Subnet in AZ1
+    Export:
+      Name: EpicRO-CentralEgressPublic1
+    Value: !Ref CentralEgressPublic1
+
+  CentralEgressPublicSubnet2:
+    Description: Central Egress Public Subnet in AZ2
+    Export:
+      Name: EpicRO-CentralEgressPublic2
+    Value: !Ref CentralEgressPublic2
+
+  CentralEgressPrivateSubnet1:
+    Description: Central Egress Private Subnet in AZ1
+    Export:
+      Name: EpicRO-CentralEgressPrivate1
+    Value: !Ref CentralEgressPrivate1
+
+  CentralEgressPrivateSubnet2:
+    Description: Central Egress Private Subnet in AZ2
+    Export:
+      Name: EpicRO-CentralEgressPrivate2
+    Value: !Ref CentralEgressPrivate2
+
+  InspectionPrivateSubnet1:
+    Description: Inspection Private Subnet in AZ1
+    Export:
+      Name: EpicRO-InspectionPrivate1
+    Value: !Ref InspectionPrivate1
+
+  InspectionPrivateSubnet2:
+    Description: Inspection Private Subnet in AZ2
+    Export:
+      Name: EpicRO-InspectionPrivate2
+    Value: !Ref InspectionPrivate2
+
+  InspectionTGWSubnet1:
+    Description: Inspection TGW Subnet in AZ1
+    Export:
+      Name: EpicRO-InspectionTGW1
+    Value: !Ref InspectionTGW1
+
+  InspectionTGWSubnet2:
+    Description: Inspection TGW Subnet in AZ2
+    Export:
+      Name: EpicRO-InspectionTGW2
+    Value: !Ref InspectionTGW2
+
+  SharedInfrastructurePrivateSubnet1:
+    Description: Shared Infrastructure Private Subnet in AZ1
+    Export:
+      Name: EpicRO-SharedInfrastructurePrivate1
+    Value: !Ref SharedInfrastructurePrivate1
+
+  SharedInfrastructurePrivateSubnet2:
+    Description: SharedInfrastructure Private Subnet in AZ2
+    Export:
+      Name: EpicRO-SharedInfrastructurePrivate2
+    Value: !Ref SharedInfrastructurePrivate2
+
+  WSSPrivateSubnet1:
+    Description: WSS Private Subnet in AZ1
+    Export:
+      Name: EpicRO-WSSPrivate1
+    Value: !Ref WSSPrivate1
+
+  WSSPrivateSubnet2:
+    Description: WSS Private Subnet in AZ2
+    Export:
+      Name: EpicRO-WSSPrivate2
+    Value: !Ref WSSPrivate2
+
+  ODBPrivateSubnet1:
+    Description: ODB Private Subnet in AZ1
+    Export:
+      Name: EpicRO-ODBPrivate1
+    Value: !Ref ODBPrivate1
+
   KuiperSG:
     Description:
       Allow HTTPS traffic from anywhere to Kuiper servers and allow all outbound traffic
@@ -592,50 +1104,153 @@ Outputs:
     Description:
       Allow HTTPS traffic from anywhere to Pulse servers and allow all outbound traffic
     Export:
-      Name: !Sub EpicRO-PulseSG
+      Name: EpicRO-PulseSG
     Value: !Ref "PulseSG"
   SQLSG:
     Description:
       Allow ODBC traffic from Kuiper or SystemPulse SG and allow all outbound traffic
     Export:
-      Name: !Sub EpicRO-SQLSG
+      Name: EpicRO-SQLSG
     Value: !Ref "SQLSG"  
   ICFGSG:
     Description:
       Allow HTTPS traffic from Inspection Security Group and allow all outbound traffic
     Export:
-      Name: !Sub EpicRO-ICFGSG
+      Name: EpicRO-ICFGSG
     Value: !Ref "ICFGSG"
   ODBSG:
     Description:
       Allow EpicTCP traffic from Pulse, Kuiper, ICFG, and HSW Security Groups and allow all outbound traffic
     Export:
-      Name: !Sub EpicRO-ODBSG
+      Name: EpicRO-ODBSG
     Value: !Ref "ODBSG"      
   HSWSG:
     Description:
       Allow HTTPS traffic from Inspection Security Group and allow all outbound traffic
     Export:
-      Name: !Sub EpicRO-HSWSG
+      Name: EpicRO-HSWSG
     Value: !Ref "HSWSG"
   CentralIngressSG:
     Description:
       Allow HTTPS traffic from anywhere and allow all outbound traffic
     Export:
-      Name: !Sub EpicRO-CentralIngressSG
+      Name: EpicRO-CentralIngressSG
     Value: !Ref "CentralIngressSG"
   CentralEgressSG:
     Description:
       Allow HTTPS traffic from anywhere and allow all outbound traffic
     Export:
-      Name: !Sub EpicRO-CentralEgressSG
+      Name: EpicRO-CentralEgressSG
     Value: !Ref "CentralEgressSG"
   InspectionSG:
     Description:
       Allow HTTPS traffic from Central Ingress SG and allow all outbound traffic
     Export:
-      Name: !Sub EpicRO-InspectionSG
-    Value: !Ref "InspectionSG"                     
+      Name: EpicRO-InspectionSG
+    Value: !Ref "InspectionSG"   
+
+  CentralIngressPublic1RT:
+    Description: Route Table attached to Central Ingress Public Subnet 1
+    Export:
+      Name: EpicRO-CentralIngressPublic1RT
+    Value: !Ref CentralIngressPublic1RT
+
+  CentralIngressPublic2RT:
+    Description: Route Table attached to Central Ingress Public Subnet 2
+    Export:
+      Name: EpicRO-CentralIngressPublic2RT
+    Value: !Ref CentralIngressPublic2RT
+
+  CentralIngressPrivate1RT:
+    Description: Route Table attached to Central Ingress Private Subnet 1
+    Export:
+      Name: EpicRO-CentralIngressPrivate1RT
+    Value: !Ref CentralIngressPrivate1RT
+
+  CentralIngressPrivate2RT:
+    Description: Route Table attached to Central Ingress Private Subnet 2
+    Export:
+      Name: EpicRO-CentralIngressPrivate2RT
+    Value: !Ref CentralIngressPrivate2RT
+
+  CentralEgressPublic1RT:
+    Description: Route Table attached to Central Egress Public Subnet 1
+    Export:
+      Name: EpicRO-CentralEgressPublic1RT
+    Value: !Ref CentralEgressPublic1RT
+  
+  CentralEgressPublic2RT:
+    Description: Route Table attached to Central Egress Public Subnet 2
+    Export:
+      Name: EpicRO-CentralEgressPublic2RT
+    Value: !Ref CentralEgressPublic2RT
+
+  CentralEgressPrivate1RT:
+    Description: Route Table attached to Central Egress Private Subnet 1
+    Export:
+      Name: EpicRO-CentralEgressPrivate1RT
+    Value: !Ref CentralEgressPrivate1RT
+  
+  CentralEgressPrivate2RT:
+    Description: Route Table attached to Central Egress Private Subnet 2
+    Export:
+      Name: EpicRO-CentralEgressPrivate2RT
+    Value: !Ref CentralEgressPrivate2RT
+
+  InspectionPrivate1RT:
+    Description: Route Table attached to Inspection Subnet 1
+    Export:
+      Name: EpicRO-InspectionPrivate1RT
+    Value: !Ref InspectionPrivate1RT
+  
+  InspectionPrivate2RT:
+    Description: Route Table attached to Inspection Subnet 2
+    Export:
+      Name: EpicRO-InspectionPrivate2RT
+    Value: !Ref InspectionPrivate2RT
+
+  InspectionTGW1RT:
+    Description: Route Table attached to Inspection Subnet 1
+    Export:
+      Name: EpicRO-InspectionTGW1RT
+    Value: !Ref InspectionTGW1RT
+  
+  InspectionTGW2RT:
+    Description: Route Table attached to Inspection Subnet 2
+    Export:
+      Name: EpicRO-InspectionTGW2RT
+    Value: !Ref InspectionTGW2RT
+
+  SharedInfrastructurePrivate1RT:
+    Description: Route Table attached to Shared Infrastructure Subnet 1
+    Export:
+      Name: EpicRO-SharedInfrastructurePrivate1RT
+    Value: !Ref SharedInfrastructurePrivate1RT
+  
+  SharedInfrastructurePrivate2RT:
+    Description: Route Table attached to Central Ingress Subnet 2
+    Export:
+      Name: EpicRO-SharedInfrastructurePrivate2RT
+    Value: !Ref SharedInfrastructurePrivate2RT
+  
+  EpicWSSPrivate1RT:
+    Description: Route Table attached to Epic WSS Subnet 1
+    Export:
+      Name: EpicRO-EpicWSSPrivate1RT
+    Value: !Ref EpicWSSPrivate1RT
+  
+  EpicWSSPrivate2RT:
+    Description: Route Table attached to Epic WSS Subnet 2
+    Export:
+      Name: EpicRO-EpicWSSPrivate2RT
+    Value: !Ref EpicWSSPrivate2RT
+  
+  ODBPrivate1RT:
+    Description: Route Table attached to ODB Subnet 1
+    Export:
+      Name: EpicRO-ODBPrivate1RT
+    Value: !Ref ODBPrivate1RT
+              
 
 
 
