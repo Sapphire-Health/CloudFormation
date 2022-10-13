@@ -1,0 +1,82 @@
+Parameters:
+  DirectoryName:
+    Description: Fully qualified domain name for the AWS Managed Microsoft AD directory 
+    Type: String
+    Default: corp.example.com
+
+  DirectoryVPCId:
+    Description: VPC to create the directory in
+    Type: AWS::EC2::VPC::Id
+  
+  DirectorySubnet1:
+    Type: AWS::EC2::Subnet::Id
+    Description: The first subnet to create the directory in
+  
+  DirectorySubnet2:
+    Type: AWS::EC2::Subnet::Id
+    Description: The second subnet to create the directory in
+
+Rules:
+  Subnet1InVPC:
+    Assertions:
+      - Assert:
+          'Fn::Equals':
+            - 'Fn::ValueOf':
+              - DirectorySubnet1
+              - VpcId
+            - Ref: DirectoryVPCId
+    AssertDescription: All subnets must in the VPC
+  Subnet2InVPC:
+    Assertions:
+      - Assert:
+          'Fn::Equals':
+            - 'Fn::ValueOf':
+                - DirectorySubnet2
+                - VpcId
+            - Ref: DirectoryVPCId
+    AssertDescription: All subnets must in the VPC        
+  SeparateSubnetAZs:
+    Assertions:
+      - Assert:
+          'Fn::Not':
+             - 'Fn::Equals':
+                - 'Fn::ValueOf':
+                    - DirectorySubnet1
+                    - AvailabilityZone
+                - 'Fn::ValueOf':
+                    - DirectorySubnet2
+                    - AvailabilityZone
+    AssertDescription: Subnets must be in different AZs   
+
+Resources:
+  #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-directoryservice-microsoftad.html
+  myDirectory: 
+    Type: AWS::DirectoryService::MicrosoftAD
+    Properties: 
+      Edition: Standard
+      Name: !Ref DirectoryName
+      Password: "{{resolve:ssm-secure:ADAdminPassword:1}}"
+      VpcSettings: 
+        SubnetIds: 
+          - !Ref DirectorySubnet1
+          - !Ref DirectorySubnet2
+        VpcId: !Ref DirectoryVPCId
+
+Outputs:
+  MSAD:
+    Description: Microsoft Active Directory ID
+    Export: 
+      Name: EpicRO-MSAD
+    Value: !Ref myDirectory
+    
+  MSADDnsIpAddress1:
+    Description: Microsoft AD DNS IP 1
+    Export: 
+      Name: EpicRO-MSADDNSIP1
+    Value: !Select [0, !GetAtt myDirectory.DnsIpAddresses]
+    
+  MSADDnsIpAddress2:
+    Description: Microsoft AD DNS IP 2
+    Export: 
+      Name: EpicRO-MSADDNSIP2  
+    Value: !Select [1, !GetAtt myDirectory.DnsIpAddresses]     

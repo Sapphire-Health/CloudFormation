@@ -12,6 +12,24 @@ Parameters:
     Type: String    
 
 Resources:
+  #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-security-group.html
+  ALBSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub 'ALBSG-${AWS::StackName}'
+      GroupDescription: Security Group for Hyperspace Web and Interconnect Application Load Balancers
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all traffic to all destination
+          IpProtocol: "-1"      
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          Description: HTTPS
+          IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+      VpcId: !Ref LoadBalancerVPCId
+
 #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-targetgroup.html
   HSWTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
@@ -79,6 +97,8 @@ Resources:
       IpAddressType: ipv4
       Name: !Sub "${AWS::StackName}-HSWALB"
       Scheme: internet-facing
+      SecurityGroups:
+        - !Ref ALBSG
       Subnets: 
         - !ImportValue EpicRO-CentralIngressPublic1
         - !ImportValue EpicRO-CentralIngressPublic2
@@ -90,6 +110,8 @@ Resources:
       IpAddressType: ipv4
       Name: !Sub "${AWS::StackName}-ICFGALB"
       Scheme: internet-facing
+      SecurityGroups:
+        - !Ref ALBSG      
       Subnets:
         - !ImportValue EpicRO-CentralIngressPublic1
         - !ImportValue EpicRO-CentralIngressPublic2      

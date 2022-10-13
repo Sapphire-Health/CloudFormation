@@ -47,52 +47,17 @@ Parameters:
     Default: Server2019
     AllowedValues: [Server2022, Server2019, Server2016]
     ConstraintDescription: Must be supported Windows Server OS
-  
+
+  Timezone:
+    Description: Server Time Zone
+    Type: String
+    AllowedValues: [Pacific Standard Time, Mountain Standard Time, Central Standard Time, Eastern Standard Time]
+
   SQLVersion:
     Description: Which SQL version will be deployed?
     Type: String
     Default: SQLStandard
     AllowedValues: [SQLStandard, SQLEnterprise]
-
-  Kuiper1IP:
-    Description: Private IP address for Kuiper Server 1
-    Type: String
-    MinLength: '7'
-    MaxLength: '15'
-    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})
-    ConstraintDescription: must be a valid IP of the form x.x.x.x
-  
-  Kuiper2IP:
-    Description: Private IP address for Kuiper Server 2
-    Type: String
-    MinLength: '7'
-    MaxLength: '15'
-    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})
-    ConstraintDescription: must be a valid IP of the form x.x.x.x
-
-  Pulse1IP:
-    Description: Private IP address for Pulse Server 1
-    Type: String
-    MinLength: '7'
-    MaxLength: '15'
-    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})
-    ConstraintDescription: must be a valid IP of the form x.x.x.x
-  
-  Pulse2IP:
-    Description: Private IP address for Pulse Server 2
-    Type: String
-    MinLength: '7'
-    MaxLength: '15'
-    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})
-    ConstraintDescription: must be a valid IP of the form x.x.x.x
-
-  SQLIP:
-    Description: Private IP address for Multipurpose SQL Server
-    Type: String
-    MinLength: '7'
-    MaxLength: '15'
-    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})
-    ConstraintDescription: must be a valid IP of the form x.x.x.x
 
   KuiperServerName:
     Description: Server Name for Kuiper Server
@@ -229,7 +194,6 @@ Resources:
       Description: !Sub 'NIC for ${KuiperServerName}1'
       GroupSet:
         - !ImportValue EpicRO-KuiperSG
-      PrivateIpAddress: !Ref Kuiper1IP
       SubnetId: !Ref ServerSubnet1
       Tags:
         - Key: Name
@@ -242,7 +206,6 @@ Resources:
       Description: !Sub 'NIC for ${KuiperServerName}2'
       GroupSet:
         - !ImportValue EpicRO-KuiperSG
-      PrivateIpAddress: !Ref Kuiper2IP
       SubnetId: !Ref ServerSubnet2
       Tags:
         - Key: Name
@@ -254,7 +217,6 @@ Resources:
       Description: !Sub 'NIC for ${PulseServerName}1'
       GroupSet:
         - !ImportValue EpicRO-PulseSG
-      PrivateIpAddress: !Ref Pulse1IP
       SubnetId: !Ref ServerSubnet1
       Tags:
         - Key: Name
@@ -267,7 +229,6 @@ Resources:
       Description: !Sub 'NIC for ${PulseServerName}2'
       GroupSet:
         - !ImportValue EpicRO-PulseSG
-      PrivateIpAddress: !Ref Pulse2IP
       SubnetId: !Ref ServerSubnet2
       Tags:
         - Key: Name
@@ -279,7 +240,6 @@ Resources:
       Description: !Sub 'NIC for ${SQLServerName}'
       GroupSet:
         - !ImportValue EpicRO-SQLSG
-      PrivateIpAddress: !Ref SQLIP
       SubnetId: !Ref ServerSubnet1
       Tags:
         - Key: Name
@@ -303,9 +263,21 @@ Resources:
       NetworkInterfaces:
         - DeviceIndex: "0"
           NetworkInterfaceId: !Ref "KuiperNIC1"
+      UserData:
+        Fn::Base64: !Sub |
+          <powershell>
+          # Rename computer
+          Rename-Computer -NewName ${KuiperServerName}1
+          Set-Timezone -Name '${Timezone}'
+
+          # Restart computer
+          Restart-Computer
+          </powershell>                 
       Tags: 
         - Key: Name
           Value: !Sub ${KuiperServerName}1
+        - Key: PatchGroup
+          Value: EpicROSharedInfra          
   
   KuiperServer2:
     Type: AWS::EC2::Instance
@@ -325,9 +297,21 @@ Resources:
       NetworkInterfaces:
         - DeviceIndex: "0"
           NetworkInterfaceId: !Ref "KuiperNIC2"
+      UserData:
+        Fn::Base64: !Sub |
+          <powershell>
+          # Rename computer
+          Rename-Computer -NewName ${KuiperServerName}2
+          Set-Timezone -Name '${Timezone}'
+
+          # Restart computer
+          Restart-Computer
+          </powershell>                 
       Tags: 
         - Key: Name
           Value: !Sub ${KuiperServerName}2
+        - Key: PatchGroup
+          Value: EpicROSharedInfra                    
 
   PulseServer1:
     Type: AWS::EC2::Instance
@@ -346,9 +330,21 @@ Resources:
       NetworkInterfaces:
         - DeviceIndex: "0"
           NetworkInterfaceId: !Ref "PulseNIC1"
+      UserData:
+        Fn::Base64: !Sub |
+          <powershell>
+          # Rename computer
+          Rename-Computer -NewName ${PulseServerName}1
+          Set-Timezone -Name '${Timezone}'
+
+          # Restart computer
+          Restart-Computer
+          </powershell>                 
       Tags: 
         - Key: Name
           Value: !Sub ${PulseServerName}1
+        - Key: PatchGroup
+          Value: EpicROSharedInfra                   
   
   PulseServer2:
     Type: AWS::EC2::Instance
@@ -368,9 +364,21 @@ Resources:
       NetworkInterfaces:
         - DeviceIndex: "0"
           NetworkInterfaceId: !Ref "PulseNIC2"
+      UserData:
+        Fn::Base64: !Sub |
+          <powershell>
+          # Rename computer
+          Rename-Computer -NewName ${PulseServerName}2
+          Set-Timezone -Name '${Timezone}'
+
+          # Restart computer
+          Restart-Computer
+          </powershell>                 
       Tags: 
         - Key: Name
           Value: !Sub ${PulseServerName}2
+        - Key: PatchGroup
+          Value: EpicROSharedInfra                   
 
   SQLServer1:
     Type: AWS::EC2::Instance
@@ -389,9 +397,21 @@ Resources:
       NetworkInterfaces:
         - DeviceIndex: "0"
           NetworkInterfaceId: !Ref "SQLNIC"
+      UserData:
+        Fn::Base64: !Sub |
+          <powershell>
+          # Rename computer
+          Rename-Computer -NewName ${SQLServerName}1
+          Set-Timezone -Name '${Timezone}'
+
+          # Restart computer
+          Restart-Computer
+          </powershell>              
       Tags: 
         - Key: Name
           Value: !Sub ${SQLServerName}1
+        - Key: PatchGroup
+          Value: EpicROSharedInfra                   
 
   Kuiper1JoinADAssociation:
     Type: AWS::SSM::Association
@@ -415,7 +435,7 @@ Resources:
     Type: AWS::SSM::Association
     Condition: HA
     Properties:
-      AssociationName: !Sub ${PulseServerName}2-EpicRO-AWS-Join-Directory-Service-Domain-Association
+      AssociationName: !Sub ${KuiperServerName}2-EpicRO-AWS-Join-Directory-Service-Domain-Association
       Name: AWS-JoinDirectoryServiceDomain
       Parameters:
         directoryId:
@@ -428,7 +448,7 @@ Resources:
       Targets:
         - Key: InstanceIds
           Values:
-            - !Ref PulseServer2         
+            - !Ref KuiperServer2         
 
   Pulse1JoinADAssociation:
     Type: AWS::SSM::Association
@@ -446,7 +466,7 @@ Resources:
       Targets:
         - Key: InstanceIds
           Values:
-            - !Ref KuiperServer1
+            - !Ref PulseServer1
 
   Pulse2JoinADAssociation:
     Type: AWS::SSM::Association

@@ -1,0 +1,451 @@
+Parameters:
+    HSWInstanceType:
+      Type: String
+      Default: t3.large
+      AllowedValues:
+        - m5.large
+        - m5.xlarge
+        - m5.2xlarge
+        - m6i.large
+        - m6i.xlarge
+        - m6i.2xlarge
+        - t3.large
+        - t3.xlarge
+        - t3.2xlarge      
+  
+    ICInstanceType:
+      Type: String
+      Default: t3.large
+      AllowedValues:
+        - m5.large
+        - m5.xlarge
+        - m5.2xlarge
+        - m6i.large
+        - m6i.xlarge
+        - m6i.2xlarge
+        - t3.large
+        - t3.xlarge
+        - t3.2xlarge          
+  
+    ServerOS:
+      Description: Server OS
+      Type: String
+      Default: Server2019
+      AllowedValues: [Server2022, Server2019, Server2016]
+      ConstraintDescription: Must be supported Windows Server OS
+
+    Timezone:
+      Description: Server Time Zone
+      Type: String
+      AllowedValues: [Pacific Standard Time, Mountain Standard Time, Central Standard Time, Eastern Standard Time]
+
+    HSWServerName:
+      Description: Server Name for HSW Server
+      Type: String
+    
+    ICServerName:
+      Description: Server Name for Interconnect Server
+      Type: String
+  
+    KeyPairName:
+      Description: "Amazon EC2 Key Pair to connect to new instances"
+      Type: AWS::EC2::KeyPair::KeyName 
+    
+    ServerVPCId:
+      Description: VPC to create the VMs in
+      Type: AWS::EC2::VPC::Id
+    
+    ServerSubnet1:
+      Type: AWS::EC2::Subnet::Id
+      Description: The subnet to create Primary VM in
+    
+    ServerSubnet2:
+      Type: AWS::EC2::Subnet::Id
+      Description: The subnet to create HA (Second) VM in.       
+
+    DirectoryName:
+      Type: String
+      Description: The name of the AWS managed Microsoft AD to join the servers to
+      Default: corp.company.com
+
+Rules:
+  Subnet1InVPC:
+    Assertions:
+      - Assert:
+          'Fn::Equals':
+            - 'Fn::ValueOf':
+              - ServerSubnet1
+              - VpcId
+            - Ref: ServerVPCId
+    AssertDescription: All subnets must in the VPC
+  Subnet2InVPC:
+    Assertions:
+      - Assert:
+          'Fn::Equals':
+            - 'Fn::ValueOf':
+                - ServerSubnet2
+                - VpcId
+            - Ref: ServerVPCId
+    AssertDescription: All subnets must in the VPC        
+  SeparateSubnetAZs:
+    Assertions:
+        - Assert:
+            'Fn::Not':
+              - 'Fn::Equals':
+                - 'Fn::ValueOf':
+                  - ServerSubnet1
+                  - AvailabilityZone
+                - 'Fn::ValueOf':
+                  - ServerSubnet2
+                  - AvailabilityZone
+    AssertDescription: Subnets must be in different AZs    
+
+Mappings:
+    RegionMap: 
+      us-east-1:
+        Server2022: ami-0fb5befc1450ca205
+        Server2019: ami-0c95d38b24a19de18
+        Server2016: ami-03fdc8b14e44968e6
+      us-east-2:
+        Server2022: ami-02bddcf6b9473bd61
+        Server2019: ami-0d72555523e18b6d7
+        Server2016: ami-04d1c6a7290ee815a
+      us-west-1:
+        Server2022: ami-03f9d9db9db74d02a
+        Server2019: ami-0a6faf8a86971bd15
+        Server2016: ami-0422fbbb4ff0c83b6
+      us-west-2:
+        Server2022: ami-090b2f6d3af372d21
+        Server2019: ami-0e6bf13e3eb85d0ba
+        Server2016: ami-034e86083b6e63887 
+    
+Resources:
+    #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-iam-role.html
+    EC2InstanceRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: 2012-10-17
+          Statement:
+            - Effect: Allow
+              Action: sts:AssumeRole
+              Principal:
+                Service:
+                  - ec2.amazonaws.com
+        Description: IAM Role used by WSS VMs to Systems Manager core functionality, Domain Join, and Install/Run the Cloudwatch agent.
+        ManagedPolicyArns:
+          - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+          - arn:aws:iam::aws:policy/AmazonSSMDirectoryServiceAccess
+          - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+    #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-iam-instanceprofile.html          
+    EC2InstanceProfile:
+      Type: AWS::IAM::InstanceProfile
+      Properties:
+        Path: /
+        Roles:
+          - !Ref EC2InstanceRole          
+    #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-networkinterface.html
+    HSWNIC1:
+      Type: AWS::EC2::NetworkInterface
+      Properties:
+        Description: !Sub 'NIC for ${HSWServerName}1'
+        GroupSet:
+          - !ImportValue EpicRO-HSWSG
+        SubnetId: !Ref ServerSubnet1
+        Tags:
+          - Key: Name
+            Value: !Sub '${HSWServerName}1-NIC1-${AWS::StackName}'
+  
+    HSWNIC2:
+      Type: AWS::EC2::NetworkInterface
+      Properties:
+        Description: !Sub 'NIC for ${HSWServerName}2'
+        GroupSet:
+          - !ImportValue EpicRO-HSWSG
+        SubnetId: !Ref ServerSubnet2
+        Tags:
+          - Key: Name
+            Value: !Sub '${HSWServerName}2-NIC1-${AWS::StackName}'          
+  
+    ICNIC1:
+      Type: AWS::EC2::NetworkInterface
+      Properties:
+        Description: !Sub 'NIC for ${ICServerName}1'
+        GroupSet:
+          - !ImportValue EpicRO-ICFGSG
+        SubnetId: !Ref ServerSubnet1
+        Tags:
+          - Key: Name
+            Value: !Sub '${ICServerName}1-NIC1-${AWS::StackName}'
+  
+    ICNIC2:
+      Type: AWS::EC2::NetworkInterface
+      Properties:
+        Description: !Sub 'NIC for ${ICServerName}2'
+        GroupSet:
+          - !ImportValue EpicRO-ICFGSG
+        SubnetId: !Ref ServerSubnet2
+        Tags:
+          - Key: Name
+            Value: !Sub '${ICServerName}2-NIC1-${AWS::StackName}'    
+    
+    #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-instance.html
+    HSWServer1:
+      Type: AWS::EC2::Instance
+      Properties: 
+        AvailabilityZone: !Select [0, Fn::GetAZs: !Ref AWS::Region]
+        BlockDeviceMappings: 
+        - DeviceName: "/dev/sda1"
+          Ebs: 
+            VolumeType: "gp3"
+            DeleteOnTermination: "false"
+            VolumeSize: "50"     
+        IamInstanceProfile: !Ref EC2InstanceProfile 
+        ImageId: !FindInMap [RegionMap, !Ref 'AWS::Region', !Ref ServerOS]
+        InstanceType: !Ref HSWInstanceType
+        KeyName: !Ref KeyPairName
+        NetworkInterfaces:
+          - DeviceIndex: "0"
+            NetworkInterfaceId: !Ref "HSWNIC1"
+        UserData:
+          Fn::Base64: !Sub |
+            <powershell>
+            # Rename computer
+            Rename-Computer -NewName ${HSWServerName}1
+            Set-Timezone -Name '${Timezone}'
+
+            # Restart computer
+            Restart-Computer
+            </powershell>   
+        Tags: 
+          - Key: Name
+            Value: !Sub ${HSWServerName}1
+          - Key: PatchGroup
+            Value: EpicROWSS
+    
+    HSWServer2:
+      Type: AWS::EC2::Instance
+      Properties: 
+        AvailabilityZone: !Select [1, Fn::GetAZs: !Ref AWS::Region]
+        BlockDeviceMappings: 
+        - DeviceName: "/dev/sda1"
+          Ebs: 
+            VolumeType: "gp3"
+            DeleteOnTermination: "false"
+            VolumeSize: "50"      
+        IamInstanceProfile: !Ref EC2InstanceProfile             
+        ImageId: !FindInMap [RegionMap, !Ref 'AWS::Region', !Ref ServerOS]
+        InstanceType: !Ref HSWInstanceType
+        KeyName: !Ref KeyPairName
+        NetworkInterfaces:
+          - DeviceIndex: "0"
+            NetworkInterfaceId: !Ref "HSWNIC2"
+        UserData:
+          Fn::Base64: !Sub |
+            <powershell>
+            # Rename computer
+            Rename-Computer -NewName ${HSWServerName}2
+            Set-Timezone -Name '${Timezone}'
+
+            # Restart computer
+            Restart-Computer
+            </powershell>               
+        Tags: 
+          - Key: Name
+            Value: !Sub ${HSWServerName}2
+          - Key: PatchGroup
+            Value: EpicROWSS            
+  
+    ICServer1:
+      Type: AWS::EC2::Instance
+      Properties: 
+        AvailabilityZone: !Select [0, Fn::GetAZs: !Ref AWS::Region]
+        BlockDeviceMappings: 
+        - DeviceName: "/dev/sda1"
+          Ebs: 
+            VolumeType: "gp3"
+            DeleteOnTermination: "false"
+            VolumeSize: "50"      
+        IamInstanceProfile: !Ref EC2InstanceProfile             
+        ImageId: !FindInMap [RegionMap, !Ref 'AWS::Region', !Ref ServerOS]
+        InstanceType: !Ref ICInstanceType
+        KeyName: !Ref KeyPairName
+        NetworkInterfaces:
+          - DeviceIndex: "0"
+            NetworkInterfaceId: !Ref "ICNIC1"
+        UserData:
+          Fn::Base64: !Sub |
+            <powershell>
+            # Rename computer
+            Rename-Computer -NewName ${ICServerName}1
+            Set-Timezone -Name '${Timezone}'
+
+            # Restart computer
+            Restart-Computer
+            </powershell>               
+        Tags: 
+          - Key: Name
+            Value: !Sub ${ICServerName}1
+          - Key: PatchGroup
+            Value: EpicROWSS            
+    
+    ICServer2:
+      Type: AWS::EC2::Instance
+      Properties: 
+        AvailabilityZone: !Select [1, Fn::GetAZs: !Ref AWS::Region]
+        BlockDeviceMappings: 
+        - DeviceName: "/dev/sda1"
+          Ebs: 
+            VolumeType: "gp3"
+            DeleteOnTermination: "false"
+            VolumeSize: "50"      
+        IamInstanceProfile: !Ref EC2InstanceProfile             
+        ImageId: !FindInMap [RegionMap, !Ref 'AWS::Region', !Ref ServerOS]
+        InstanceType: !Ref ICInstanceType
+        KeyName: !Ref KeyPairName
+        NetworkInterfaces:
+          - DeviceIndex: "0"
+            NetworkInterfaceId: !Ref "ICNIC2"
+        UserData:
+          Fn::Base64: !Sub |
+            <powershell>
+            # Rename computer
+            Rename-Computer -NewName ${ICServerName}2
+            Set-Timezone -Name '${Timezone}'
+
+            # Restart computer
+            Restart-Computer
+            </powershell>                 
+        Tags: 
+          - Key: Name
+            Value: !Sub ${ICServerName}2
+          - Key: PatchGroup
+            Value: EpicROWSS            
+
+    HSW1JoinADAssociation:
+      Type: AWS::SSM::Association
+      Properties:
+        AssociationName: !Sub ${HSWServerName}1-EpicRO-AWS-Join-Directory-Service-Domain-Association
+        Name: AWS-JoinDirectoryServiceDomain
+        Parameters:
+          directoryId:
+            - !ImportValue EpicRO-MSAD
+          directoryName:
+            - !Ref DirectoryName
+          dnsIpAddresses:
+            - !ImportValue EpicRO-MSADDNSIP1
+            - !ImportValue EpicRO-MSADDNSIP2
+        Targets:
+          - Key: InstanceIds
+            Values:
+              - !Ref HSWServer1
+
+    HSW2JoinADAssociation:
+      Type: AWS::SSM::Association
+      Properties:
+        AssociationName: !Sub ${HSWServerName}2-EpicRO-AWS-Join-Directory-Service-Domain-Association
+        Name: AWS-JoinDirectoryServiceDomain
+        Parameters:
+          directoryId:
+            - !ImportValue EpicRO-MSAD
+          directoryName:
+            - !Ref DirectoryName
+          dnsIpAddresses:
+            - !ImportValue EpicRO-MSADDNSIP1
+            - !ImportValue EpicRO-MSADDNSIP2
+        Targets:
+          - Key: InstanceIds
+            Values:
+              - !Ref HSWServer2         
+
+    IC1JoinADAssociation:
+      Type: AWS::SSM::Association
+      Properties:
+        AssociationName: !Sub ${ICServerName}1-EpicRO-AWS-Join-Directory-Service-Domain-Association
+        Name: AWS-JoinDirectoryServiceDomain
+        Parameters:
+          directoryId:
+            - !ImportValue EpicRO-MSAD
+          directoryName:
+            - !Ref DirectoryName
+          dnsIpAddresses:
+            - !ImportValue EpicRO-MSADDNSIP1
+            - !ImportValue EpicRO-MSADDNSIP2
+        Targets:
+          - Key: InstanceIds
+            Values:
+              - !Ref ICServer1
+
+    IC2JoinADAssociation:
+      Type: AWS::SSM::Association
+      Properties:
+        AssociationName: !Sub ${ICServerName}2-EpicRO-AWS-Join-Directory-Service-Domain-Association
+        Name: AWS-JoinDirectoryServiceDomain
+        Parameters:
+          directoryId:
+            - !ImportValue EpicRO-MSAD
+          directoryName:
+            - !Ref DirectoryName
+          dnsIpAddresses:
+            - !ImportValue EpicRO-MSADDNSIP1
+            - !ImportValue EpicRO-MSADDNSIP2
+        Targets:
+          - Key: InstanceIds
+            Values:
+              - !Ref ICServer2                        
+
+Outputs:
+  HSW1:
+    Description: Hyperspace Web Server 1
+    Export: 
+      Name: EpicRO-HSW1
+    Value: !Ref HSWServer1
+
+  HSW1PrivateIP:
+    Description: Hyperspace Web Server 1 Private IP Address
+    Export: 
+      Name: EpicRO-HSW1IPAddress
+    Value: !GetAtt HSWServer1.PrivateIp   
+
+  HSW2:
+    Description: Hyperspace Web Server 2
+    Export: 
+      Name: EpicRO-HSW2
+    Value: !Ref HSWServer2
+
+  HSW2PrivateIP:
+    Description: Hyperspace Web Server 2 Private IP Address
+    Export: 
+      Name: EpicRO-HSW2IPAddress
+    Value: !GetAtt HSWServer2.PrivateIp      
+
+  IC1:
+    Description: Interconnect Server 1
+    Export: 
+      Name: EpicRO-IC1
+    Value: !Ref ICServer1
+
+  IC1PrivateIP:
+    Description: Interconnect Server 1 Private IP Address
+    Export: 
+      Name: EpicRO-IC1IPAddress
+    Value: !GetAtt ICServer1.PrivateIp  
+
+  IC2:
+    Description: Interconnect Server 2
+    Export: 
+      Name: EpicRO-IC2
+    Value: !Ref ICServer2            
+
+  IC2PrivateIP:
+    Description: Interconnect Server 2 Private IP Address
+    Export: 
+      Name: EpicRO-IC2IPAddress
+    Value: !GetAtt ICServer2.PrivateIp       
+
+  
+  
+
+  
+           
+    
