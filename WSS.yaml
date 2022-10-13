@@ -33,38 +33,11 @@ Parameters:
       Default: Server2019
       AllowedValues: [Server2022, Server2019, Server2016]
       ConstraintDescription: Must be supported Windows Server OS
-  
-    HSW1IP:
-      Description: Private IP address for HSW Server 1
+
+    Timezone:
+      Description: Server Time Zone
       Type: String
-      MinLength: '7'
-      MaxLength: '15'
-      AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})
-      ConstraintDescription: must be a valid IP of the form x.x.x.x
-    
-    HSW2IP:
-      Description: Private IP address for HSW Server 2
-      Type: String
-      MinLength: '7'
-      MaxLength: '15'
-      AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})
-      ConstraintDescription: must be a valid IP of the form x.x.x.x
-  
-    IC1IP:
-      Description: Private IP address for Interconnect Server 1
-      Type: String
-      MinLength: '7'
-      MaxLength: '15'
-      AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})
-      ConstraintDescription: must be a valid IP of the form x.x.x.x
-    
-    IC2IP:
-      Description: Private IP address for Interconnect Server 2
-      Type: String
-      MinLength: '7'
-      MaxLength: '15'
-      AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})
-      ConstraintDescription: must be a valid IP of the form x.x.x.x
+      AllowedValues: [Pacific Standard Time, Mountain Standard Time, Central Standard Time, Eastern Standard Time]
 
     HSWServerName:
       Description: Server Name for HSW Server
@@ -178,7 +151,6 @@ Resources:
         Description: !Sub 'NIC for ${HSWServerName}1'
         GroupSet:
           - !ImportValue EpicRO-HSWSG
-        PrivateIpAddress: !Ref HSW1IP
         SubnetId: !Ref ServerSubnet1
         Tags:
           - Key: Name
@@ -190,7 +162,6 @@ Resources:
         Description: !Sub 'NIC for ${HSWServerName}2'
         GroupSet:
           - !ImportValue EpicRO-HSWSG
-        PrivateIpAddress: !Ref HSW2IP
         SubnetId: !Ref ServerSubnet2
         Tags:
           - Key: Name
@@ -202,7 +173,6 @@ Resources:
         Description: !Sub 'NIC for ${ICServerName}1'
         GroupSet:
           - !ImportValue EpicRO-ICFGSG
-        PrivateIpAddress: !Ref IC1IP
         SubnetId: !Ref ServerSubnet1
         Tags:
           - Key: Name
@@ -214,7 +184,6 @@ Resources:
         Description: !Sub 'NIC for ${ICServerName}2'
         GroupSet:
           - !ImportValue EpicRO-ICFGSG
-        PrivateIpAddress: !Ref IC2IP
         SubnetId: !Ref ServerSubnet2
         Tags:
           - Key: Name
@@ -238,9 +207,21 @@ Resources:
         NetworkInterfaces:
           - DeviceIndex: "0"
             NetworkInterfaceId: !Ref "HSWNIC1"
+        UserData:
+          Fn::Base64: !Sub |
+            <powershell>
+            # Rename computer
+            Rename-Computer -NewName ${HSWServerName}1
+            Set-Timezone -Name '${Timezone}'
+
+            # Restart computer
+            Restart-Computer
+            </powershell>   
         Tags: 
           - Key: Name
             Value: !Sub ${HSWServerName}1
+          - Key: PatchGroup
+            Value: EpicROWSS
     
     HSWServer2:
       Type: AWS::EC2::Instance
@@ -259,9 +240,21 @@ Resources:
         NetworkInterfaces:
           - DeviceIndex: "0"
             NetworkInterfaceId: !Ref "HSWNIC2"
+        UserData:
+          Fn::Base64: !Sub |
+            <powershell>
+            # Rename computer
+            Rename-Computer -NewName ${HSWServerName}2
+            Set-Timezone -Name '${Timezone}'
+
+            # Restart computer
+            Restart-Computer
+            </powershell>               
         Tags: 
           - Key: Name
             Value: !Sub ${HSWServerName}2
+          - Key: PatchGroup
+            Value: EpicROWSS            
   
     ICServer1:
       Type: AWS::EC2::Instance
@@ -280,9 +273,21 @@ Resources:
         NetworkInterfaces:
           - DeviceIndex: "0"
             NetworkInterfaceId: !Ref "ICNIC1"
+        UserData:
+          Fn::Base64: !Sub |
+            <powershell>
+            # Rename computer
+            Rename-Computer -NewName ${ICServerName}1
+            Set-Timezone -Name '${Timezone}'
+
+            # Restart computer
+            Restart-Computer
+            </powershell>               
         Tags: 
           - Key: Name
             Value: !Sub ${ICServerName}1
+          - Key: PatchGroup
+            Value: EpicROWSS            
     
     ICServer2:
       Type: AWS::EC2::Instance
@@ -301,9 +306,21 @@ Resources:
         NetworkInterfaces:
           - DeviceIndex: "0"
             NetworkInterfaceId: !Ref "ICNIC2"
+        UserData:
+          Fn::Base64: !Sub |
+            <powershell>
+            # Rename computer
+            Rename-Computer -NewName ${ICServerName}2
+            Set-Timezone -Name '${Timezone}'
+
+            # Restart computer
+            Restart-Computer
+            </powershell>                 
         Tags: 
           - Key: Name
             Value: !Sub ${ICServerName}2
+          - Key: PatchGroup
+            Value: EpicROWSS            
 
     HSW1JoinADAssociation:
       Type: AWS::SSM::Association
@@ -426,6 +443,7 @@ Outputs:
       Name: EpicRO-IC2IPAddress
     Value: !GetAtt ICServer2.PrivateIp       
 
+  
   
 
   

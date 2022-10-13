@@ -58,13 +58,15 @@ Resources:
       - Key: Name
         Value: !Sub 'TransitGateway-${AWS::StackName}'
 
+
+
   #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-vpc.html
   CentralIngressVPC:
     Type: AWS::EC2::VPC
     Properties: 
       CidrBlock: !Ref CentralIngressVPCCIDR
-      EnableDnsHostnames: 'false'
-      EnableDnsSupport: 'false'
+      EnableDnsHostnames: 'true'
+      EnableDnsSupport: 'true'
       Tags:
         - Key: Name
           Value: !Sub 'CentralIngressVPC-${AWS::StackName}'
@@ -73,8 +75,8 @@ Resources:
     Type: AWS::EC2::VPC
     Properties: 
       CidrBlock: !Ref CentralEgressVPCCIDR
-      EnableDnsHostnames: 'false'
-      EnableDnsSupport: 'false'
+      EnableDnsHostnames: 'true'
+      EnableDnsSupport: 'true'
       Tags:
         - Key: Name
           Value: !Sub 'CentralEgressVPC-${AWS::StackName}'
@@ -83,8 +85,8 @@ Resources:
     Type: AWS::EC2::VPC
     Properties: 
       CidrBlock: !Ref InspectionVPCCIDR
-      EnableDnsHostnames: 'false'
-      EnableDnsSupport: 'false'
+      EnableDnsHostnames: 'true'
+      EnableDnsSupport: 'true'
       Tags:
         - Key: Name
           Value: !Sub 'InspectionVPC-${AWS::StackName}'  
@@ -93,8 +95,8 @@ Resources:
     Type: AWS::EC2::VPC
     Properties: 
       CidrBlock: !Ref SharedInfrastructureVPCCIDR
-      EnableDnsHostnames: 'false'
-      EnableDnsSupport: 'false'
+      EnableDnsHostnames: 'true'
+      EnableDnsSupport: 'true'
       Tags:
         - Key: Name
           Value: !Sub 'SharedInfrastructureVPC-${AWS::StackName}' 
@@ -103,8 +105,8 @@ Resources:
     Type: AWS::EC2::VPC
     Properties: 
       CidrBlock: !Ref EpicVPCCIDR
-      EnableDnsHostnames: 'false'
-      EnableDnsSupport: 'false'
+      EnableDnsHostnames: 'true'
+      EnableDnsSupport: 'true'
       Tags:
         - Key: Name
           Value: !Sub 'EpicVPC-${AWS::StackName}'             
@@ -525,28 +527,58 @@ Resources:
     Properties:
        RouteTableId: !Ref CentralIngressPublic1RT
        DestinationCidrBlock: !Ref SharedInfrastructureVPCCIDR
-       VpcPeeringConnectionId: !Ref IngressToInspection
+       TransitGatewayId: !Ref EpicTransitGateway
 
   RouteIngress2toSharedInfraInspection:
     Type: AWS::EC2::Route
     Properties:
        RouteTableId: !Ref CentralIngressPublic2RT
        DestinationCidrBlock: !Ref SharedInfrastructureVPCCIDR
-       VpcPeeringConnectionId: !Ref IngressToInspection
+       TransitGatewayId: !Ref EpicTransitGateway
 
   RouteIngress1toEpicInspection:
     Type: AWS::EC2::Route
     Properties:
        RouteTableId: !Ref CentralIngressPublic1RT
        DestinationCidrBlock: !Ref EpicVPCCIDR
-       VpcPeeringConnectionId: !Ref IngressToInspection
+       TransitGatewayId: !Ref EpicTransitGateway
 
   RouteIngress2toEpicInspection:
     Type: AWS::EC2::Route
     Properties:
        RouteTableId: !Ref CentralIngressPublic2RT
        DestinationCidrBlock: !Ref EpicVPCCIDR
-       VpcPeeringConnectionId: !Ref IngressToInspection
+       TransitGatewayId: !Ref EpicTransitGateway
+
+  RouteIngress1toFWInspection:
+    Type: AWS::EC2::Route
+    Properties:
+       RouteTableId: !Ref CentralIngressPublic1RT
+       DestinationCidrBlock: !Ref InspectionVPCCIDR
+       TransitGatewayId: !Ref EpicTransitGateway
+
+  RouteIngress2toFWInspection:
+    Type: AWS::EC2::Route
+    Properties:
+       RouteTableId: !Ref CentralIngressPublic2RT
+       DestinationCidrBlock: !Ref InspectionVPCCIDR
+       TransitGatewayId: !Ref EpicTransitGateway
+
+  RouteIngressPrivate1toTGW:
+    Type: AWS::EC2::Route
+    DependsOn: EpicTransitGateway
+    Properties:
+       RouteTableId: !Ref CentralIngressPrivate1RT
+       DestinationCidrBlock: 0.0.0.0/0
+       TransitGatewayId: !Ref EpicTransitGateway
+
+  RouteIngressPrivate2toTGW:
+    Type: AWS::EC2::Route
+    DependsOn: EpicTransitGateway
+    Properties:
+       RouteTableId: !Ref CentralIngressPrivate2RT
+       DestinationCidrBlock: 0.0.0.0/0
+       TransitGatewayId: !Ref EpicTransitGateway
 
   RouteEgressPublic1toIGW:
     Type: AWS::EC2::Route
@@ -561,6 +593,34 @@ Resources:
        RouteTableId: !Ref CentralEgressPublic2RT
        DestinationCidrBlock: 0.0.0.0/0
        GatewayId: !Ref EgressInternetGateway       
+
+  RouteEgressPublic1toEpicVPC:
+    Type: AWS::EC2::Route
+    Properties:
+       RouteTableId: !Ref CentralEgressPublic1RT
+       DestinationCidrBlock: !Ref EpicVPCCIDR
+       TransitGatewayId: !Ref EpicTransitGateway
+
+  RouteEgressPublic2toEpicVPC:
+    Type: AWS::EC2::Route
+    Properties:
+       RouteTableId: !Ref CentralEgressPublic2RT
+       DestinationCidrBlock: !Ref EpicVPCCIDR
+       TransitGatewayId: !Ref EpicTransitGateway  
+
+  RouteEgressPublic1toSharedInfraVPC:
+    Type: AWS::EC2::Route
+    Properties:
+       RouteTableId: !Ref CentralEgressPublic1RT
+       DestinationCidrBlock: !Ref SharedInfrastructureVPCCIDR
+       TransitGatewayId: !Ref EpicTransitGateway
+
+  RouteEgressPublic2toSharedInfraVPC:
+    Type: AWS::EC2::Route
+    Properties:
+       RouteTableId: !Ref CentralEgressPublic2RT
+       DestinationCidrBlock: !Ref SharedInfrastructureVPCCIDR
+       TransitGatewayId: !Ref EpicTransitGateway
 
   RouteEgressPrivate1toNGW:
     Type: AWS::EC2::Route
@@ -591,6 +651,34 @@ Resources:
        RouteTableId: !Ref InspectionPrivate2RT
        DestinationCidrBlock: 0.0.0.0/0
        TransitGatewayId: !Ref EpicTransitGateway  
+
+  RouteInspection1toEpic:
+    Type: AWS::EC2::Route
+    Properties:
+       RouteTableId: !Ref InspectionPrivate1RT
+       DestinationCidrBlock: !Ref EpicVPCCIDR
+       TransitGatewayId: !Ref EpicTransitGateway
+
+  RouteInspection2toEpic:
+    Type: AWS::EC2::Route   
+    Properties:
+       RouteTableId: !Ref InspectionPrivate2RT
+       DestinationCidrBlock: !Ref EpicVPCCIDR
+       TransitGatewayId: !Ref EpicTransitGateway 
+
+  RouteInspection1toIngress:
+    Type: AWS::EC2::Route
+    Properties:
+       RouteTableId: !Ref InspectionPrivate1RT
+       DestinationCidrBlock: !Ref CentralIngressVPCCIDR
+       TransitGatewayId: !Ref EpicTransitGateway
+
+  RouteInspection2toIngress:
+    Type: AWS::EC2::Route   
+    Properties:
+       RouteTableId: !Ref InspectionPrivate2RT
+       DestinationCidrBlock: !Ref CentralIngressVPCCIDR
+       TransitGatewayId: !Ref EpicTransitGateway
 
   RouteSharedInfrastructure1toTGW:
     Type: AWS::EC2::Route
@@ -631,6 +719,59 @@ Resources:
        RouteTableId: !Ref ODBPrivate1RT
        DestinationCidrBlock: 0.0.0.0/0
        TransitGatewayId: !Ref EpicTransitGateway          
+
+  #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-vpcendpoint.html
+  SSMEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcEndpointType: Interface
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.ssm'
+      VpcId: !Ref EpicVPC
+      SubnetIds:
+        - !Ref WSSPrivate1
+        - !Ref WSSPrivate2
+      PrivateDnsEnabled: true        
+      SecurityGroupIds:
+        - !Ref VPCESG
+
+  SSMMessageEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcEndpointType: Interface
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.ssmmessages'
+      VpcId: !Ref EpicVPC
+      SubnetIds:
+        - !Ref WSSPrivate1
+        - !Ref WSSPrivate2
+      PrivateDnsEnabled: true        
+      SecurityGroupIds:
+        - !Ref VPCESG
+
+  EC2Endpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcEndpointType: Interface
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.ec2'
+      VpcId: !Ref EpicVPC
+      SubnetIds:
+        - !Ref WSSPrivate1
+        - !Ref WSSPrivate2
+      PrivateDnsEnabled: true
+      SecurityGroupIds:
+        - !Ref VPCESG
+
+  EC2MessageEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcEndpointType: Interface
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.ec2messages'
+      VpcId: !Ref EpicVPC
+      SubnetIds:
+        - !Ref WSSPrivate1
+        - !Ref WSSPrivate2
+      PrivateDnsEnabled: true        
+      SecurityGroupIds:
+        - !Ref VPCESG
 
   #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-transitgatewayattachment.html
   InspectionVPCTGWAttach:
@@ -679,38 +820,117 @@ Resources:
       VpcId: !Ref CentralEgressVPC                    
       Tags:
         - Key: Name
-          Value: CentralEgressVPC-TGWAttachment 
+          Value: CentralEgressVPC-TGWAttachment            
+
+  CentralIngressVPCTGWAttach:
+    Type: AWS::EC2::TransitGatewayAttachment
+    Properties: 
+      SubnetIds: 
+        - !Ref CentralIngressPrivate1
+        - !Ref CentralIngressPrivate2
+      TransitGatewayId: !Ref EpicTransitGateway
+      VpcId: !Ref CentralIngressVPC                    
+      Tags:
+        - Key: Name
+          Value: CentralIngressVPC-TGWAttachment  
 
   #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-transitgatewayroutetable.html
-  CentralEgressVPCTGWRT:
+  PreInspectionTGWRT:
     Type: AWS::EC2::TransitGatewayRouteTable
-    Properties: 
+    Properties:
       TransitGatewayId: !Ref EpicTransitGateway
-      Tags: 
+      Tags:
         - Key: Name
-          Value: CentralEgressVPC-RT
+          Value: EpicRO-PreInspectionTGWRT
 
-  #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-transitgatewayroutetableassociation.html
-  CentralEgressVPCRTAssociation:
-    Type: AWS::EC2::TransitGatewayRouteTableAssociation
-    Properties: 
-      TransitGatewayAttachmentId: !Ref CentralEgressVPCTGWAttach
-      TransitGatewayRouteTableId: !Ref CentralEgressVPCTGWRT
-   
+  PostInspectionTGWRT:
+    Type: AWS::EC2::TransitGatewayRouteTable
+    Properties:
+      TransitGatewayId: !Ref EpicTransitGateway
+      Tags:
+        - Key: Name
+          Value: EpicRO-PostInspectionTGWRT          
+
   #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-transitgatewayroute.html
-  EgressToNGWRoute:
+  InspectAllTGWRoute:
+    Type: AWS::EC2::TransitGatewayRoute
+    Properties: 
+      DestinationCidrBlock: 0.0.0.0/0
+      TransitGatewayAttachmentId: !Ref InspectionVPCTGWAttach
+      TransitGatewayRouteTableId: !Ref PreInspectionTGWRT 
+
+  EgressInternetTGWRoute:
     Type: AWS::EC2::TransitGatewayRoute
     Properties: 
       DestinationCidrBlock: 0.0.0.0/0
       TransitGatewayAttachmentId: !Ref CentralEgressVPCTGWAttach
-      TransitGatewayRouteTableId: !Ref CentralEgressVPCTGWRT     
+      TransitGatewayRouteTableId: !Ref PostInspectionTGWRT 
 
-  #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-vpcpeeringconnection.html
-  IngressToInspection:
-    Type: AWS::EC2::VPCPeeringConnection
-    Properties:
-      PeerVpcId: !Ref CentralIngressVPC
-      VpcId: !Ref InspectionVPC
+  InspectionVPCTGWRoute:
+    Type: AWS::EC2::TransitGatewayRoute
+    Properties: 
+      DestinationCidrBlock: !Ref InspectionVPCCIDR
+      TransitGatewayAttachmentId: !Ref InspectionVPCTGWAttach
+      TransitGatewayRouteTableId: !Ref PostInspectionTGWRT 
+
+  SharedInfraVPCTGWRoute:
+    Type: AWS::EC2::TransitGatewayRoute
+    Properties: 
+      DestinationCidrBlock: !Ref SharedInfrastructureVPCCIDR
+      TransitGatewayAttachmentId: !Ref SharedInfraVPCTGWAttach
+      TransitGatewayRouteTableId: !Ref PostInspectionTGWRT 
+
+  EpicVPCTGWRoute:
+    Type: AWS::EC2::TransitGatewayRoute
+    Properties: 
+      DestinationCidrBlock: !Ref EpicVPCCIDR
+      TransitGatewayAttachmentId: !Ref EpicVPCTGWAttach
+      TransitGatewayRouteTableId: !Ref PostInspectionTGWRT 
+
+  CentralEgressVPCTGWRoute:
+    Type: AWS::EC2::TransitGatewayRoute
+    Properties: 
+      DestinationCidrBlock: !Ref CentralEgressVPCCIDR
+      TransitGatewayAttachmentId: !Ref CentralEgressVPCTGWAttach
+      TransitGatewayRouteTableId: !Ref PostInspectionTGWRT 
+
+  CentralIngressVPCTGWRoute:
+    Type: AWS::EC2::TransitGatewayRoute
+    Properties: 
+      DestinationCidrBlock: !Ref CentralIngressVPCCIDR
+      TransitGatewayAttachmentId: !Ref CentralIngressVPCTGWAttach
+      TransitGatewayRouteTableId: !Ref PostInspectionTGWRT       
+
+  #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-transitgatewayroutetableassociation.html
+  InspectionVPCTGWAttachRT:
+    Type: AWS::EC2::TransitGatewayRouteTableAssociation
+    Properties: 
+      TransitGatewayAttachmentId: !Ref InspectionVPCTGWAttach
+      TransitGatewayRouteTableId: !Ref PostInspectionTGWRT 
+
+  SharedInfraVPCTGWAttachRT:
+    Type: AWS::EC2::TransitGatewayRouteTableAssociation
+    Properties: 
+      TransitGatewayAttachmentId: !Ref SharedInfraVPCTGWAttach
+      TransitGatewayRouteTableId: !Ref PostInspectionTGWRT
+
+  EpicVPCTGWAttachRT:
+    Type: AWS::EC2::TransitGatewayRouteTableAssociation
+    Properties: 
+      TransitGatewayAttachmentId: !Ref EpicVPCTGWAttach
+      TransitGatewayRouteTableId: !Ref PostInspectionTGWRT      
+
+  CentralEgressVPCTGWAttachRT:
+    Type: AWS::EC2::TransitGatewayRouteTableAssociation
+    Properties: 
+      TransitGatewayAttachmentId: !Ref CentralEgressVPCTGWAttach
+      TransitGatewayRouteTableId: !Ref PostInspectionTGWRT
+
+  CentralIngressVPCTGWAttachRT:
+    Type: AWS::EC2::TransitGatewayRouteTableAssociation
+    Properties: 
+      TransitGatewayAttachmentId: !Ref CentralIngressVPCTGWAttach
+      TransitGatewayRouteTableId: !Ref PreInspectionTGWRT
 
   #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-internetgateway.html        
   IngressInternetGateway:
@@ -854,11 +1074,16 @@ Resources:
           Description: Allow all traffic to all destination
           IpProtocol: "-1"      
       SecurityGroupIngress:
-        - CidrIp: !Ref InspectionVPCCIDR
+        - CidrIp: 0.0.0.0/0
           Description: HTTPS
           IpProtocol: tcp
           FromPort: 443
           ToPort: 443    
+        - CidrIp: !Ref SharedInfrastructureVPCCIDR
+          Description: WinRM
+          IpProtocol: tcp
+          FromPort: 5985
+          ToPort: 5986                                
       VpcId: !Ref EpicVPC     
 
   HSWSG:
@@ -871,11 +1096,38 @@ Resources:
           Description: Allow all traffic to all destination
           IpProtocol: "-1"      
       SecurityGroupIngress:
-        - CidrIp: !Ref InspectionVPCCIDR
+        - CidrIp: 0.0.0.0/0
           Description: HTTPS
           IpProtocol: tcp
           FromPort: 443
           ToPort: 443    
+        - CidrIp: !Ref SharedInfrastructureVPCCIDR
+          Description: WinRM
+          IpProtocol: tcp
+          FromPort: 5985
+          ToPort: 5986                                         
+      VpcId: !Ref EpicVPC
+
+  VPCESG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub 'VPCEndpointSG-${AWS::StackName}'
+      GroupDescription: Security Group for VPC Endpoints
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all traffic to all destination
+          IpProtocol: "-1"      
+      SecurityGroupIngress:
+        - CidrIp: !Ref EpicVPCCIDR
+          Description: HTTPS
+          IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443    
+        - CidrIp: !Ref SharedInfrastructureVPCCIDR
+          Description: HTTPS
+          IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443            
       VpcId: !Ref EpicVPC
 
   ODBSG:
@@ -1100,54 +1352,69 @@ Outputs:
     Export:
       Name: EpicRO-KuiperSG
     Value: !Ref "KuiperSG"
+
   PulseSG:
     Description:
       Allow HTTPS traffic from anywhere to Pulse servers and allow all outbound traffic
     Export:
       Name: EpicRO-PulseSG
     Value: !Ref "PulseSG"
+
   SQLSG:
     Description:
       Allow ODBC traffic from Kuiper or SystemPulse SG and allow all outbound traffic
     Export:
       Name: EpicRO-SQLSG
     Value: !Ref "SQLSG"  
+
   ICFGSG:
     Description:
       Allow HTTPS traffic from Inspection Security Group and allow all outbound traffic
     Export:
       Name: EpicRO-ICFGSG
     Value: !Ref "ICFGSG"
+
   ODBSG:
     Description:
       Allow EpicTCP traffic from Pulse, Kuiper, ICFG, and HSW Security Groups and allow all outbound traffic
     Export:
       Name: EpicRO-ODBSG
     Value: !Ref "ODBSG"      
+
   HSWSG:
     Description:
       Allow HTTPS traffic from Inspection Security Group and allow all outbound traffic
     Export:
       Name: EpicRO-HSWSG
     Value: !Ref "HSWSG"
+
   CentralIngressSG:
     Description:
       Allow HTTPS traffic from anywhere and allow all outbound traffic
     Export:
       Name: EpicRO-CentralIngressSG
     Value: !Ref "CentralIngressSG"
+
   CentralEgressSG:
     Description:
       Allow HTTPS traffic from anywhere and allow all outbound traffic
     Export:
       Name: EpicRO-CentralEgressSG
     Value: !Ref "CentralEgressSG"
+
   InspectionSG:
     Description:
       Allow HTTPS traffic from Central Ingress SG and allow all outbound traffic
     Export:
       Name: EpicRO-InspectionSG
     Value: !Ref "InspectionSG"   
+
+  VPCESG:
+    Description:
+      Security Group controlling access to VPC Endpoints for Session Manager
+    Export:
+      Name: EpicRO-VPCESG
+    Value: !Ref "VPCESG"    
 
   CentralIngressPublic1RT:
     Description: Route Table attached to Central Ingress Public Subnet 1
@@ -1250,7 +1517,4 @@ Outputs:
     Export:
       Name: EpicRO-ODBPrivate1RT
     Value: !Ref ODBPrivate1RT
-              
-
-
-
+      
