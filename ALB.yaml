@@ -28,6 +28,11 @@ Resources:
           IpProtocol: tcp
           FromPort: 443
           ToPort: 443
+        - CidrIp: 0.0.0.0/0
+          Description: HTTP
+          IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80          
       VpcId: !Ref LoadBalancerVPCId
 
 #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-targetgroup.html
@@ -59,10 +64,8 @@ Resources:
         - Key: stickiness.enabled
           Value: true
         - Key: stickiness.type
-          Value: app_cookie
-        - Key: stickiness.app_cookie.cookie_name
-          Value: AWSHSWCOOKIE
-        - Key: stickiness.app_cookie.duration_seconds
+          Value: lb_cookie
+        - Key: stickiness.lb_cookie.duration_seconds
           Value: 86400
       VpcId: !Ref LoadBalancerVPCId                 
 
@@ -130,6 +133,19 @@ Resources:
       Port: 443
       Protocol: HTTPS
 
+  HSWHTTPListener:
+    Type: "AWS::ElasticLoadBalancingV2::Listener"
+    Properties:
+      DefaultActions:
+        - Type: "redirect"
+          RedirectConfig:
+            Protocol: "HTTPS"
+            Port: 443
+            StatusCode: "HTTP_301"
+      LoadBalancerArn: !Ref HSWALB
+      Port: 80
+      Protocol: "HTTP"
+
   ICFGListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties: 
@@ -141,7 +157,19 @@ Resources:
       LoadBalancerArn: !Ref ICFGALB        
       Port: 443
       Protocol: HTTPS
-       
+
+  ICFGHTTPListener:
+    Type: "AWS::ElasticLoadBalancingV2::Listener"
+    Properties:
+      DefaultActions:
+        - Type: "redirect"
+          RedirectConfig:
+            Protocol: "HTTPS"
+            Port: 443
+            StatusCode: "HTTP_301"
+      LoadBalancerArn: !Ref ICFGALB
+      Port: 80
+      Protocol: "HTTP"       
 
 Outputs:
   HSWALB:
