@@ -132,6 +132,7 @@ Resources:
       LoadBalancerArn: !Ref HSWALB
       Port: 443
       Protocol: HTTPS
+      SslPolicy: ELBSecurityPolicy-FS-1-2-Res-2020-10
 
   HSWHTTPListener:
     Type: "AWS::ElasticLoadBalancingV2::Listener"
@@ -157,6 +158,7 @@ Resources:
       LoadBalancerArn: !Ref ICFGALB        
       Port: 443
       Protocol: HTTPS
+      SslPolicy: ELBSecurityPolicy-FS-1-2-Res-2020-10      
 
   ICFGHTTPListener:
     Type: "AWS::ElasticLoadBalancingV2::Listener"
