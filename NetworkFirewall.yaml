@@ -34,8 +34,16 @@ Resources:
           - 'aws:pass'
         StatelessFragmentDefaultActions:
           - 'aws:drop'
+        StatefulRuleGroupReferences:
+          - ResourceArn: 'arn:aws:network-firewall:us-east-2:aws-managed:stateful-rulegroup/ThreatSignaturesIOCActionOrder'
+          - ResourceArn: 'arn:aws:network-firewall:us-east-2:aws-managed:stateful-rulegroup/ThreatSignaturesEmergingEventsActionOrder'
+          - ResourceArn: 'arn:aws:network-firewall:us-east-2:aws-managed:stateful-rulegroup/ThreatSignaturesExploitsActionOrder'
+          - ResourceArn: 'arn:aws:network-firewall:us-east-2:aws-managed:stateful-rulegroup/ThreatSignaturesMalwareActionOrder'
+          - ResourceArn: 'arn:aws:network-firewall:us-east-2:aws-managed:stateful-rulegroup/ThreatSignaturesBotnetWindowsActionOrder'
+          - ResourceArn: 'arn:aws:network-firewall:us-east-2:aws-managed:stateful-rulegroup/ThreatSignaturesBotnetWebActionOrder'
+          - ResourceArn: 'arn:aws:network-firewall:us-east-2:aws-managed:stateful-rulegroup/ThreatSignaturesBotnetActionOrder'
       Description: Epic FW Policy containing AWS Managed stateful rule groups
-
+      
   #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-route.html
   RouteInspectionTGW1toFW:
     Type: AWS::EC2::Route
