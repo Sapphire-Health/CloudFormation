@@ -395,6 +395,12 @@ Resources:
               - !Ref ICServer2                        
 
 Outputs:
+  EC2InstanceProfile:
+    Description: Instance profile with the IAM Role used by WSS VMs to Systems Manager core functionality, Domain Join, and Install/Run the Cloudwatch agent.
+    Export:
+      Name: EpicRO-WSSEC2Profile
+    Value: !Ref EC2InstanceProfile
+
   HSW1:
     Description: Hyperspace Web Server 1
     Export: 
