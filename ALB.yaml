@@ -11,6 +11,20 @@ Parameters:
     Description: The Amazon Resource Name (ARN) of the certificate to use with Haiku/Canto
     Type: String    
 
+#### These Mappings are for reference - you need to stick the appropriate number in the Bucket policy principal "AWS": "arn:aws:iam::elb-account-id:root" ####
+#### https://docs.aws.amazon.com/elasticloadbalancing/latest/application/enable-access-logging.html ####
+
+#Mappings:
+#    RegionMap: 
+#      us-east-1:
+#        ELBAcct: 127311923021
+#      us-east-2:
+#        ELBAcct: 033677994240
+#      us-west-1:
+#        ELBAcct: 027434742980
+#      us-west-2:
+#        ELBAcct: 797873946194
+
 Resources:
   #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-security-group.html
   ALBSG:
@@ -57,7 +71,31 @@ Resources:
         - Id: !ImportValue EpicRO-HSW1IPAddress
           AvailabilityZone: all        
         - Id: !ImportValue EpicRO-HSW2IPAddress
+          AvailabilityZone: all  
+        - Id: !ImportValue EpicRO-HSW3IPAddress
           AvailabilityZone: all        
+        - Id: !ImportValue EpicRO-HSW4IPAddress
+          AvailabilityZone: all 
+        - Id: !ImportValue EpicRO-HSW5IPAddress
+          AvailabilityZone: all        
+        - Id: !ImportValue EpicRO-HSW6IPAddress
+          AvailabilityZone: all
+        - Id: !ImportValue EpicRO-HSW7IPAddress
+          AvailabilityZone: all        
+        - Id: !ImportValue EpicRO-HSW8IPAddress
+          AvailabilityZone: all 
+        - Id: !ImportValue EpicRO-HSW9IPAddress
+          AvailabilityZone: all        
+        - Id: !ImportValue EpicRO-HSW10IPAddress
+          AvailabilityZone: all 
+        - Id: !ImportValue EpicRO-HSW11IPAddress
+          AvailabilityZone: all        
+        - Id: !ImportValue EpicRO-HSW12IPAddress
+          AvailabilityZone: all 
+        - Id: !ImportValue EpicRO-HSW13IPAddress
+          AvailabilityZone: all        
+        - Id: !ImportValue EpicRO-HSW14IPAddress
+          AvailabilityZone: all                                                                    
       TargetGroupAttributes:
         - Key: deregistration_delay.timeout_seconds
           Value: 3600
@@ -91,13 +129,53 @@ Resources:
           AvailabilityZone: all
         - Id: !ImportValue EpicRO-IC2IPAddress
           AvailabilityZone: all        
+        - Id: !ImportValue EpicRO-IC3IPAddress
+          AvailabilityZone: all
+        - Id: !ImportValue EpicRO-IC4IPAddress
+          AvailabilityZone: all   
+        - Id: !ImportValue EpicRO-IC5IPAddress
+          AvailabilityZone: all
+        - Id: !ImportValue EpicRO-IC6IPAddress
+          AvailabilityZone: all                       
       VpcId: !Ref LoadBalancerVPCId    
+
+#https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-s3-bucket.html
+  ALBS3Bucket:
+    Type: AWS::S3::Bucket
+
+#https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-s3-policy.html
+  ALBS3BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref ALBS3Bucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: 
+              AWS:
+                - arn:aws:iam::033677994240:root
+            Action:
+              - s3:PutObject
+            Resource: 
+              - !GetAtt ALBS3Bucket.Arn
+              - !Sub '${ALBS3Bucket.Arn}/*'
+
 
 #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-loadbalancer.html
   HSWALB:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties: 
       IpAddressType: ipv4
+      LoadBalancerAttributes:
+          - Key: deletion_protection.enabled
+            Value: true
+          - Key: access_logs.s3.enabled
+            Value: true
+          - Key: access_logs.s3.bucket
+            Value: !Ref ALBS3Bucket
+          - Key: access_logs.s3.prefix
+            Value: "HSWALB_AccessLogs"
       Name: !Sub "${AWS::StackName}-HSWALB"
       Scheme: internet-facing
       SecurityGroups:
@@ -106,11 +184,21 @@ Resources:
         - !ImportValue EpicRO-CentralIngressPublic1
         - !ImportValue EpicRO-CentralIngressPublic2
       Type: application
+    DependsOn: ALBS3BucketPolicy
 
   ICFGALB:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties: 
       IpAddressType: ipv4
+      LoadBalancerAttributes:      
+          - Key: deletion_protection.enabled
+            Value: true      
+          - Key: access_logs.s3.enabled
+            Value: true
+          - Key: access_logs.s3.bucket
+            Value: !Ref ALBS3Bucket 
+          - Key: access_logs.s3.prefix
+            Value: "ICFGALB_AccessLogs"                       
       Name: !Sub "${AWS::StackName}-ICFGALB"
       Scheme: internet-facing
       SecurityGroups:
@@ -118,7 +206,8 @@ Resources:
       Subnets:
         - !ImportValue EpicRO-CentralIngressPublic1
         - !ImportValue EpicRO-CentralIngressPublic2      
-      Type: application    
+      Type: application   
+    DependsOn: ALBS3BucketPolicy 
 
   #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-listener.html
   HSWListener:
