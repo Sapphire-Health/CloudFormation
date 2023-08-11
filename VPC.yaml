@@ -44,6 +44,15 @@ Parameters:
     AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
     ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
 
+  TotalEnvironmentCIDR:
+    Description: The IP CIDR inclusive of the 5 VPC CIDRs
+    Type: String
+    MinLength: '9'
+    MaxLength: '18'
+    Default: 10.0.0.0/16
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
+    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.    
+
 Resources:
   #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-transitgateway.html
   EpicTransitGateway:
@@ -110,6 +119,95 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub 'EpicVPC-${AWS::StackName}'             
+
+#https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-logs-loggroup.html
+  CloudROVPCLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      RetentionInDays: 7
+
+#https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-iam-role.html
+  VPCFlowLogRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              Service:
+                - vpc-flow-logs.amazonaws.com
+      Description: IAM Role used by VPC Flow Logs to publish to Amazon CloudWatch Log Group
+      Policies:
+        - PolicyName: Cloudwatch_Flowlogs_Policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                  - 'logs:DescribeLogGroups'
+                  - 'logs:DescribeLogStreams'
+                Resource: !GetAtt CloudROVPCLogGroup.Arn
+
+  #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-flowlog.html
+  CentralIngressVPCFlowLog:
+    Type: AWS::EC2::FlowLog
+    Properties: 
+      DeliverLogsPermissionArn: !GetAtt VPCFlowLogRole.Arn
+      ResourceId: !Ref CentralIngressVPC
+      ResourceType: VPC
+      LogDestinationType: cloud-watch-logs
+      LogDestination: !GetAtt CloudROVPCLogGroup.Arn
+      TrafficType: ALL
+      MaxAggregationInterval: 600
+
+  CentralEgressVPCFlowLog:
+    Type: AWS::EC2::FlowLog
+    Properties: 
+      DeliverLogsPermissionArn: !GetAtt VPCFlowLogRole.Arn
+      ResourceId: !Ref CentralEgressVPC
+      ResourceType: VPC
+      LogDestinationType: cloud-watch-logs
+      LogDestination: !GetAtt CloudROVPCLogGroup.Arn
+      TrafficType: ALL
+      MaxAggregationInterval: 600
+
+  InspectionVPCFlowLog:
+    Type: AWS::EC2::FlowLog
+    Properties: 
+      DeliverLogsPermissionArn: !GetAtt VPCFlowLogRole.Arn
+      ResourceId: !Ref InspectionVPC
+      ResourceType: VPC
+      LogDestinationType: cloud-watch-logs
+      LogDestination: !GetAtt CloudROVPCLogGroup.Arn
+      TrafficType: ALL
+      MaxAggregationInterval: 600
+
+  SharedInfrastructureVPCFlowLog:
+    Type: AWS::EC2::FlowLog
+    Properties: 
+      DeliverLogsPermissionArn: !GetAtt VPCFlowLogRole.Arn
+      ResourceId: !Ref SharedInfrastructureVPC
+      ResourceType: VPC
+      LogDestinationType: cloud-watch-logs
+      LogDestination: !GetAtt CloudROVPCLogGroup.Arn
+      TrafficType: ALL
+      MaxAggregationInterval: 600
+
+  EpicVPCFlowLog:
+    Type: AWS::EC2::FlowLog
+    Properties: 
+      DeliverLogsPermissionArn: !GetAtt VPCFlowLogRole.Arn
+      ResourceId: !Ref EpicVPC
+      ResourceType: VPC
+      LogDestinationType: cloud-watch-logs
+      LogDestination: !GetAtt CloudROVPCLogGroup.Arn
+      TrafficType: ALL
+      MaxAggregationInterval: 600                
 
 #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-subnet.html
   CentralIngressPublic1:
@@ -508,6 +606,7 @@ Resources:
       RouteTableId: !Ref ODBPrivate1RT
 
   #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-route.html
+### These routes are what allow public internet access to the environment ###
   RouteIngress1toIGW:
     Type: AWS::EC2::Route
     Properties:
@@ -522,46 +621,18 @@ Resources:
        DestinationCidrBlock: 0.0.0.0/0
        GatewayId: !Ref IngressInternetGateway    
 
-  RouteIngress1toSharedInfraInspection:
+  RouteIngress1toEnvironment:
     Type: AWS::EC2::Route
     Properties:
        RouteTableId: !Ref CentralIngressPublic1RT
-       DestinationCidrBlock: !Ref SharedInfrastructureVPCCIDR
+       DestinationCidrBlock: !Ref TotalEnvironmentCIDR
        TransitGatewayId: !Ref EpicTransitGateway
 
-  RouteIngress2toSharedInfraInspection:
+  RouteIngress2toEnvironment:
     Type: AWS::EC2::Route
     Properties:
        RouteTableId: !Ref CentralIngressPublic2RT
-       DestinationCidrBlock: !Ref SharedInfrastructureVPCCIDR
-       TransitGatewayId: !Ref EpicTransitGateway
-
-  RouteIngress1toEpicInspection:
-    Type: AWS::EC2::Route
-    Properties:
-       RouteTableId: !Ref CentralIngressPublic1RT
-       DestinationCidrBlock: !Ref EpicVPCCIDR
-       TransitGatewayId: !Ref EpicTransitGateway
-
-  RouteIngress2toEpicInspection:
-    Type: AWS::EC2::Route
-    Properties:
-       RouteTableId: !Ref CentralIngressPublic2RT
-       DestinationCidrBlock: !Ref EpicVPCCIDR
-       TransitGatewayId: !Ref EpicTransitGateway
-
-  RouteIngress1toFWInspection:
-    Type: AWS::EC2::Route
-    Properties:
-       RouteTableId: !Ref CentralIngressPublic1RT
-       DestinationCidrBlock: !Ref InspectionVPCCIDR
-       TransitGatewayId: !Ref EpicTransitGateway
-
-  RouteIngress2toFWInspection:
-    Type: AWS::EC2::Route
-    Properties:
-       RouteTableId: !Ref CentralIngressPublic2RT
-       DestinationCidrBlock: !Ref InspectionVPCCIDR
+       DestinationCidrBlock: !Ref TotalEnvironmentCIDR
        TransitGatewayId: !Ref EpicTransitGateway
 
   RouteIngressPrivate1toTGW:
@@ -569,7 +640,7 @@ Resources:
     DependsOn: EpicTransitGateway
     Properties:
        RouteTableId: !Ref CentralIngressPrivate1RT
-       DestinationCidrBlock: 0.0.0.0/0
+       DestinationCidrBlock: !Ref TotalEnvironmentCIDR
        TransitGatewayId: !Ref EpicTransitGateway
 
   RouteIngressPrivate2toTGW:
@@ -577,7 +648,7 @@ Resources:
     DependsOn: EpicTransitGateway
     Properties:
        RouteTableId: !Ref CentralIngressPrivate2RT
-       DestinationCidrBlock: 0.0.0.0/0
+       DestinationCidrBlock: !Ref TotalEnvironmentCIDR
        TransitGatewayId: !Ref EpicTransitGateway
 
   RouteEgressPublic1toIGW:
@@ -587,6 +658,13 @@ Resources:
        DestinationCidrBlock: 0.0.0.0/0
        GatewayId: !Ref EgressInternetGateway
 
+  RouteEgressPublic1toEnvironment:
+    Type: AWS::EC2::Route
+    Properties:
+       RouteTableId: !Ref CentralEgressPublic1RT
+       DestinationCidrBlock: !Ref TotalEnvironmentCIDR
+       TransitGatewayId: !Ref EpicTransitGateway
+
   RouteEgressPublic2toIGW:
     Type: AWS::EC2::Route
     Properties:
@@ -594,33 +672,12 @@ Resources:
        DestinationCidrBlock: 0.0.0.0/0
        GatewayId: !Ref EgressInternetGateway       
 
-  RouteEgressPublic1toEpicVPC:
-    Type: AWS::EC2::Route
-    Properties:
-       RouteTableId: !Ref CentralEgressPublic1RT
-       DestinationCidrBlock: !Ref EpicVPCCIDR
-       TransitGatewayId: !Ref EpicTransitGateway
-
-  RouteEgressPublic2toEpicVPC:
+  RouteEgressPublic2toEnvironment:
     Type: AWS::EC2::Route
     Properties:
        RouteTableId: !Ref CentralEgressPublic2RT
-       DestinationCidrBlock: !Ref EpicVPCCIDR
+       DestinationCidrBlock: !Ref TotalEnvironmentCIDR
        TransitGatewayId: !Ref EpicTransitGateway  
-
-  RouteEgressPublic1toSharedInfraVPC:
-    Type: AWS::EC2::Route
-    Properties:
-       RouteTableId: !Ref CentralEgressPublic1RT
-       DestinationCidrBlock: !Ref SharedInfrastructureVPCCIDR
-       TransitGatewayId: !Ref EpicTransitGateway
-
-  RouteEgressPublic2toSharedInfraVPC:
-    Type: AWS::EC2::Route
-    Properties:
-       RouteTableId: !Ref CentralEgressPublic2RT
-       DestinationCidrBlock: !Ref SharedInfrastructureVPCCIDR
-       TransitGatewayId: !Ref EpicTransitGateway
 
   RouteEgressPrivate1toNGW:
     Type: AWS::EC2::Route
@@ -629,12 +686,26 @@ Resources:
        DestinationCidrBlock: 0.0.0.0/0
        NatGatewayId: !Ref AZ1NATGateway
 
+  RouteEgressPrivate1toEnvironment:
+    Type: AWS::EC2::Route
+    Properties:
+       RouteTableId: !Ref CentralEgressPrivate1RT
+       DestinationCidrBlock: !Ref TotalEnvironmentCIDR
+       TransitGatewayId: !Ref EpicTransitGateway  
+
   RouteEgressPrivate2toNGW:
     Type: AWS::EC2::Route
     Properties:
        RouteTableId: !Ref CentralEgressPrivate2RT
        DestinationCidrBlock: 0.0.0.0/0
        NatGatewayId: !Ref AZ2NATGateway
+
+  RouteEgressPrivate2toEnvironment:
+    Type: AWS::EC2::Route
+    Properties:
+       RouteTableId: !Ref CentralEgressPrivate2RT
+       DestinationCidrBlock: !Ref TotalEnvironmentCIDR
+       TransitGatewayId: !Ref EpicTransitGateway  
 
   RouteInspection1toTGW:
     Type: AWS::EC2::Route
@@ -651,34 +722,6 @@ Resources:
        RouteTableId: !Ref InspectionPrivate2RT
        DestinationCidrBlock: 0.0.0.0/0
        TransitGatewayId: !Ref EpicTransitGateway  
-
-  RouteInspection1toEpic:
-    Type: AWS::EC2::Route
-    Properties:
-       RouteTableId: !Ref InspectionPrivate1RT
-       DestinationCidrBlock: !Ref EpicVPCCIDR
-       TransitGatewayId: !Ref EpicTransitGateway
-
-  RouteInspection2toEpic:
-    Type: AWS::EC2::Route   
-    Properties:
-       RouteTableId: !Ref InspectionPrivate2RT
-       DestinationCidrBlock: !Ref EpicVPCCIDR
-       TransitGatewayId: !Ref EpicTransitGateway 
-
-  RouteInspection1toIngress:
-    Type: AWS::EC2::Route
-    Properties:
-       RouteTableId: !Ref InspectionPrivate1RT
-       DestinationCidrBlock: !Ref CentralIngressVPCCIDR
-       TransitGatewayId: !Ref EpicTransitGateway
-
-  RouteInspection2toIngress:
-    Type: AWS::EC2::Route   
-    Properties:
-       RouteTableId: !Ref InspectionPrivate2RT
-       DestinationCidrBlock: !Ref CentralIngressVPCCIDR
-       TransitGatewayId: !Ref EpicTransitGateway
 
   RouteSharedInfrastructure1toTGW:
     Type: AWS::EC2::Route
@@ -780,6 +823,8 @@ Resources:
       SubnetIds: 
         - !Ref InspectionTGW1
         - !Ref InspectionTGW2
+      Options:
+          ApplianceModeSupport: enable
       TransitGatewayId: !Ref EpicTransitGateway
       VpcId: !Ref InspectionVPC
       Tags:
@@ -1030,12 +1075,12 @@ Resources:
           Description: Allow all traffic to all destination
           IpProtocol: "-1"      
       SecurityGroupIngress:
-        - CidrIp: 0.0.0.0/0
+        - CidrIp: !Ref TotalEnvironmentCIDR
           Description: HTTPS
           IpProtocol: tcp
           FromPort: 443
           ToPort: 443
-        - CidrIp: 0.0.0.0/0
+        - CidrIp: !Ref TotalEnvironmentCIDR
           Description: HTTP
           IpProtocol: tcp
           FromPort: 80
@@ -1061,7 +1106,12 @@ Resources:
           Description: ODBC
           IpProtocol: tcp
           FromPort: 1433
-          ToPort: 1433          
+          ToPort: 1433    
+        - SourceSecurityGroupId: !Ref KuiperSG
+          Description: SMB
+          IpProtocol: tcp
+          FromPort: 445
+          ToPort: 445                
       VpcId: !Ref SharedInfrastructureVPC
 
   ICFGSG:
@@ -1155,57 +1205,99 @@ Resources:
           IpProtocol: tcp
           FromPort: 4972
           ToPort: 4972       
+
+        - CidrIp: 172.28.0.0/16
+          Description: ESMP
+          IpProtocol: tcp
+          FromPort: 10443
+          ToPort: 10443       
+        - CidrIp: 172.28.0.0/16
+          Description: Chrony (Port 123)
+          IpProtocol: udp
+          FromPort: 123
+          ToPort: 123       
+        - CidrIp: 10.15.0.0/16
+          Description: Chrony (Second Port 123)
+          IpProtocol: udp
+          FromPort: 123
+          ToPort: 123       
+        - CidrIp: 172.28.0.0/16
+          Description: SuperServer Port
+          IpProtocol: tcp
+          FromPort: 1972
+          ToPort: 1972       
+        - CidrIp: 172.28.0.0/16
+          Description: Default Port (RPT)
+          IpProtocol: tcp
+          FromPort: 1973
+          ToPort: 1973       
+        - CidrIp: 172.28.231.0/24
+          Description: ISCAgent (DC3)
+          IpProtocol: tcp
+          FromPort: 2188
+          ToPort: 2188       
+        - CidrIp: 172.28.211.0/24
+          Description: ISCAgent (DC1)
+          IpProtocol: tcp
+          FromPort: 2188
+          ToPort: 2188       
+        - CidrIp: 172.28.211.0/24
+          Description: SSH (DC1)
+          IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22       
+        - CidrIp: 172.28.231.0/24
+          Description: SSH (DC3)
+          IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22       
+        - CidrIp: 172.28.0.0/16
+          Description: Chrony (Port 323)
+          IpProtocol: udp
+          FromPort: 323
+          ToPort: 323      
+        - CidrIp: 10.15.0.0/16
+          Description: Chrony (Second Port 323)
+          IpProtocol: udp
+          FromPort: 323
+          ToPort: 323      
+        - CidrIp: 172.28.210.0/24
+          Description: LDAP
+          IpProtocol: tcp
+          FromPort: 389
+          ToPort: 389       
+        - CidrIp: 172.28.0.0/16
+          Description: License Server (TCP)
+          IpProtocol: tcp
+          FromPort: 4002
+          ToPort: 4002       
+        - CidrIp: 172.28.0.0/16
+          Description: License Server (UDP)
+          IpProtocol: udp
+          FromPort: 4002
+          ToPort: 4002       
+        - CidrIp: 172.28.0.0/16
+          Description: System Pulse
+          IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443       
+        - CidrIp: 10.197.0.0/16
+          Description: TCP
+          IpProtocol: tcp
+          FromPort: 4972
+          ToPort: 4972       
+        - CidrIp: 172.28.231.0/24
+          Description: TCP (DC3)
+          IpProtocol: tcp
+          FromPort: 4972
+          ToPort: 4972       
+        - CidrIp: 172.28.211.0/24
+          Description: TCP (DC1)
+          IpProtocol: tcp
+          FromPort: 4972
+          ToPort: 4972       
+
       VpcId: !Ref EpicVPC        
-
-  CentralIngressSG:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupName: !Sub 'CentralIngressSG-${AWS::StackName}'
-      GroupDescription: Security Group for Inbound traffic from internet
-      SecurityGroupEgress:
-        - CidrIp: 0.0.0.0/0
-          Description: Allow all traffic to all destination
-          IpProtocol: "-1"      
-      SecurityGroupIngress:
-        - CidrIp: 0.0.0.0/0
-          Description: HTTPS
-          IpProtocol: tcp
-          FromPort: 443
-          ToPort: 443    
-      VpcId: !Ref CentralIngressVPC  
-
-  CentralEgressSG:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupName: !Sub 'Central-EgressSG-${AWS::StackName}'
-      GroupDescription: Security Group for outbound traffic to Internet
-      SecurityGroupEgress:
-        - CidrIp: 0.0.0.0/0
-          Description: Allow all traffic to all destination
-          IpProtocol: "-1"      
-      SecurityGroupIngress:
-        - CidrIp: 0.0.0.0/0
-          Description: HTTPS
-          IpProtocol: tcp
-          FromPort: 443
-          ToPort: 443    
-      VpcId: !Ref CentralEgressVPC        
-  InspectionSG:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupName: !Sub 'InspectionSG-${AWS::StackName}'
-      GroupDescription: Security Group for oInspection Firewall VPC
-      SecurityGroupEgress:
-        - CidrIp: 0.0.0.0/0
-          Description: Allow all traffic to all destination
-          IpProtocol: "-1"      
-      SecurityGroupIngress:
-        - CidrIp: !Ref CentralIngressVPCCIDR
-          Description: HTTPS
-          IpProtocol: tcp
-          FromPort: 443
-          ToPort: 443      
-      VpcId: !Ref InspectionVPC  
 
 Outputs: 
   CentralIngressVPC:
@@ -1387,27 +1479,6 @@ Outputs:
     Export:
       Name: EpicRO-HSWSG
     Value: !Ref "HSWSG"
-
-  CentralIngressSG:
-    Description:
-      Allow HTTPS traffic from anywhere and allow all outbound traffic
-    Export:
-      Name: EpicRO-CentralIngressSG
-    Value: !Ref "CentralIngressSG"
-
-  CentralEgressSG:
-    Description:
-      Allow HTTPS traffic from anywhere and allow all outbound traffic
-    Export:
-      Name: EpicRO-CentralEgressSG
-    Value: !Ref "CentralEgressSG"
-
-  InspectionSG:
-    Description:
-      Allow HTTPS traffic from Central Ingress SG and allow all outbound traffic
-    Export:
-      Name: EpicRO-InspectionSG
-    Value: !Ref "InspectionSG"   
 
   VPCESG:
     Description:
